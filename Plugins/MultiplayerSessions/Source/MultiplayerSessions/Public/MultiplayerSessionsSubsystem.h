@@ -14,7 +14,7 @@
 //
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FMultiplayerOnCreateSessionComplete, bool, bWasSuccessful);
 // 如果想用DYNAMIC_MULTICAST_DALEGATE,所有类型都必须与蓝图兼容, 
-// 然而OnlineSessionSearchResult和EOnJoinSessionCompleteResult不兼 容,所以这里只能用MUTICAST_DELEGATE
+// 然而OnlineSessionSearchResult和EOnJoinSessionCompleteResult不兼容,所以这里只能用MUTICAST_DELEGATE
 DECLARE_MULTICAST_DELEGATE_TwoParams(FMultiplayerOnFindSessionsComplete,
 	const TArray<FOnlineSessionSearchResult> &SessionResults, bool bWasSuccessful);
 DECLARE_MULTICAST_DELEGATE_OneParam(FMultiplayerOnJoinSessionComplete, EOnJoinSessionCompleteResult::Type Result);
@@ -83,5 +83,4 @@ private:
 	bool bCreateSessionOnDestroy{ false };
 	int32 LastNumPublicConnections;
 	FString LastMatchType;
-
 };
