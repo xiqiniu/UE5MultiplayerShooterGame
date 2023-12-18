@@ -3,13 +3,15 @@
 
 #include "Projectile.h"
 #include"Components/BoxComponent.h"
-#include"GameFramework/ProjectileMovementComponent.h"
 #include"Kismet/GameplayStatics.h"
 #include"particles/ParticleSystem.h"
 #include "particles/ParticleSystemComponent.h"
 #include"Sound/SoundCue.h"
 #include"Blaster/Character/BlasterCharacter.h"
 #include"Blaster/Blaster.h"
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraComponent.h"
+
 AProjectile::AProjectile()
 {
 	PrimaryActorTick.bCanEverTick = true;
@@ -23,9 +25,6 @@ AProjectile::AProjectile()
 	CollisionBox->SetCollisionResponseToChannel(ECollisionChannel::ECC_Visibility, ECollisionResponse::ECR_Block);
 	CollisionBox->SetCollisionResponseToChannel(ECollisionChannel::ECC_WorldStatic, ECollisionResponse::ECR_Block);
 	CollisionBox->SetCollisionResponseToChannel(ECC_SkeletalMesh, ECollisionResponse::ECR_Block);
-	ProjectileMovementComponent = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovementComponent"));
-	ProjectileMovementComponent->bRotationFollowsVelocity = true;
-
 }
 
 void AProjectile::BeginPlay()
@@ -55,10 +54,68 @@ void AProjectile::OnHit(UPrimitiveComponent *HitComp, AActor *OtherActor, UPrimi
 	Destroy();
 }
 
+void AProjectile::SpawnTrailSystem()
+{
+	if (TrailSystem)
+	{
+		TrailSystemComponent = UNiagaraFunctionLibrary::SpawnSystemAttached(
+			TrailSystem,
+			GetRootComponent(),
+			FName(),
+			GetActorLocation(),
+			GetActorRotation(),
+			EAttachLocation::KeepWorldPosition,
+			false
+		);
+	}
+}
+
 void AProjectile::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+}
+
+void AProjectile::StartDestroyTimer()
+{
+	GetWorldTimerManager().SetTimer(
+		DestroyTimer,
+		this,
+		&AProjectile::DestroyTimerFinished,
+		DestroyTime
+	);
+}
+
+void AProjectile::DestroyTimerFinished()
+{
+	Destroy();
+}
+
+void AProjectile::ExplodeDamage()
+{
+	APawn *FiringPawn = GetInstigator();
+
+	// 只在服务器处理伤害
+	if (FiringPawn && HasAuthority())
+	{
+		AController *FiringController = FiringPawn->GetController();
+		if (FiringController)
+		{
+			UGameplayStatics::ApplyRadialDamageWithFalloff(
+				this, // World context object
+				Damage, // 基础伤害
+				Damage / 3.f, // 最低伤害
+				GetActorLocation(), // 原点
+				DamageInnerRadius, // 内圈 -- 内圈受到基础伤害
+				DamageOuterRadius, // 外圈 -- 内圈到外圈伤害逐渐减少至最低伤害
+				1.f, // 线性衰减
+				UDamageType::StaticClass(), // DamageTypeClass
+				TArray<AActor *>(), // 忽略的Actors,可以设置忽略自己避免打自己
+				this, // DamageCauser
+				FiringController // InstigatorController
+			);
+		}
+	}
 }
 
 void AProjectile::Destroyed()

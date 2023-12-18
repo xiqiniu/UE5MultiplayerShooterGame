@@ -22,6 +22,7 @@ public:
 	void SetHUDCarriedAmmo(int32 Ammo);
 	void SetHUDMatchCountdown(float CountdownTime);
 	void SetHUDAnnouncementCountdown(float CountdownTime);
+	void SetHUDGrenades(int32 Grenades);
 	virtual void OnPossess(APawn* InPawn) override;
 	virtual float GetServerTime() const; 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty> &OutLifetimeProps) const override;
@@ -100,4 +101,5 @@ private:
 	float HUDMaxHealth;
 	float HUDScore;
 	int32 HUDDefeats;
+	int32 HUDGrenades;
 };

@@ -53,6 +53,10 @@ ABlasterCharacter::ABlasterCharacter()
 	MinNetUpdateFrequency = 33.f;
 
 	DissolveTimeLine = CreateDefaultSubobject<UTimelineComponent>(TEXT("DissolveTimeLineComponent"));
+
+	AttachedGrenade = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Attached Greade"));
+	AttachedGrenade->SetupAttachment(GetMesh(), FName("GrenadeSocket"));
+	AttachedGrenade->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 }
 
 void ABlasterCharacter::BeginPlay()
@@ -64,6 +68,10 @@ void ABlasterCharacter::BeginPlay()
 	if (HasAuthority())
 	{
 		OnTakeAnyDamage.AddDynamic(this, &ABlasterCharacter::ReceiveDamage);
+	}
+	if (AttachedGrenade)
+	{
+		AttachedGrenade->SetVisibility(false);
 	}
 }
 
@@ -116,6 +124,7 @@ void ABlasterCharacter::SetupPlayerInputComponent(UInputComponent *PlayerInputCo
 	PlayerInputComponent->BindAction("Aim", IE_Released, this, &ABlasterCharacter::AimButtonReleased);	
 	PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &ABlasterCharacter::FireButtonPressed);
 	PlayerInputComponent->BindAction("Fire", IE_Released, this, &ABlasterCharacter::FireButtonReleased);
+	PlayerInputComponent->BindAction("ThrowGrenade", IE_Pressed, this, &ABlasterCharacter::GrenadeButtonPressed);
 
 	PlayerInputComponent->BindAxis("MoveForward", this, &ABlasterCharacter::MoveForward);
 	PlayerInputComponent->BindAxis("MoveRight", this, &ABlasterCharacter::MoveRight);
@@ -159,6 +168,24 @@ void ABlasterCharacter::PlayReloadMontage()
 		case EWeaponType::EWT_AssaultRifle:
 			SectionName = FName("Rifle");
 			break;
+		case EWeaponType::EWT_RocketLauncher:
+			SectionName = FName("RocketLauncher");
+			break;		
+		case EWeaponType::EWT_Pistol:
+			SectionName = FName("Pistol");
+			break;
+		case EWeaponType::EWT_SubmachineGun:
+			SectionName = FName("Pistol");
+			break;
+		case EWeaponType::EWT_Shotgun:
+			SectionName = FName("Shotgun");
+			break;
+		case EWeaponType::EWT_SniperRifle:
+			SectionName = FName("SniperRifle");
+			break;
+			case EWeaponType::EWT_GrenadeLauncher:
+			SectionName = FName("GrenadeLauncher");
+			break;
 		}
 		AnimInstance->Montage_JumpToSection(SectionName);
 	}
@@ -170,6 +197,15 @@ void ABlasterCharacter::PlayElimMontage()
 	if (AnimInstance && ElimMontage)
 	{
 		AnimInstance->Montage_Play(ElimMontage);
+	}
+}
+
+void ABlasterCharacter::PlayThrowGrenadeMontage()
+{
+	UAnimInstance *AnimInstance = GetMesh()->GetAnimInstance();
+	if (AnimInstance && ThrowGrenadeMontage)
+	{
+		AnimInstance->Montage_Play(ThrowGrenadeMontage);
 	}
 }
 
@@ -194,6 +230,7 @@ void ABlasterCharacter::PlayHitReactMontage()
 
 void ABlasterCharacter::ReceiveDamage(AActor *DamagedActor, float Damage, const UDamageType *DamageType, AController *InstigatorController, AActor *DamageCauser)
 {
+	if (bElimmed) return;
 	Health = FMath::Clamp(Health - Damage, 0.f, MaxHealth);
 	UpdateHUDHealth();
 	PlayHitReactMontage();
@@ -313,6 +350,11 @@ void ABlasterCharacter::AimButtonReleased()
 	{
 		Combat->SetAiming(false);
 	}
+}
+
+void ABlasterCharacter::GrenadeButtonPressed()
+{
+	Combat->ThrowGrenade();
 }
 
 void ABlasterCharacter::AimOffset(float DeltaTime)
@@ -548,12 +590,13 @@ void ABlasterCharacter::MulticastElim_Implementation()
 	// 开始播放溶解效果
 	StartDissolve();
 
+	// 禁止角色移动和行动
+	bDisableGameplay = true;
+
 	// 禁用角色移动,前者禁用移动,后者禁用旋转
 	GetCharacterMovement()->DisableMovement();
 	GetCharacterMovement()->StopMovementImmediately();
 
-	// 禁止角色移动和行动
-	bDisableGameplay = true;
 	if (Combat)
 	{
 		Combat->FireButtonPressed(false);
@@ -583,6 +626,15 @@ void ABlasterCharacter::MulticastElim_Implementation()
 	if (ElimBotSound)
 	{
 		UGameplayStatics::SpawnSoundAtLocation(this, ElimBotSound, GetActorLocation());
+	}
+
+	bool bHideSniperScope = IsLocallyControlled() &&
+		Combat->bAiming &&
+		Combat->EquippedWeapon &&
+		Combat->EquippedWeapon->GetWeaponType() == EWeaponType::EWT_SniperRifle;
+	if (bHideSniperScope)
+	{
+		ShowSniperScopeWidget(false);
 	}
 }
 
@@ -617,7 +669,7 @@ void ABlasterCharacter::UpdateDissolveMaterial(float DissolveValue)
 {
 	if (DynamicDissolveMaterialInstance)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("UpdateDissolveMaterial, DissolveValue is : %f"), DissolveValue);
+		//UE_LOG(LogTemp, Warning, TEXT("UpdateDissolveMaterial, DissolveValue is : %f"), DissolveValue);
 		DynamicDissolveMaterialInstance->SetScalarParameterValue(TEXT("Dissolve"), DissolveValue);
 	}
 }

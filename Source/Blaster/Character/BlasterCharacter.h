@@ -24,6 +24,7 @@ public:
 	void PlayFireMontage(bool bAiming);
 	void PlayReloadMontage();
 	void PlayElimMontage();
+	void PlayThrowGrenadeMontage();
 	virtual void OnRep_ReplicatedMovement() override;
 
 	UPROPERTY(Replicated)
@@ -36,6 +37,9 @@ public:
 	void MulticastElim();
 
 	virtual void Destroyed() override;
+
+	UFUNCTION(BlueprintImplementableEvent)
+	void ShowSniperScopeWidget(bool bShowScope);
 protected:
 	virtual void BeginPlay() override;
 	void MoveForward(float Value);
@@ -47,6 +51,7 @@ protected:
 	void ReloadButtonPressed();
 	void AimButtonPressed();
 	void AimButtonReleased();
+	void GrenadeButtonPressed();
 	void AimOffset(float DeltaTime);
 	void CalculateAO_Pitch();
 	void SimProxiesTurn();
@@ -112,6 +117,9 @@ private:
 
 	UPROPERTY(EditAnywhere, Category = Combat)
 	UAnimMontage *ElimMontage;
+
+	UPROPERTY(EditAnywhere, Category = Combat)
+	UAnimMontage *ThrowGrenadeMontage;
 
 	bool bRotateRootBone;
 	// 设置simulated的角色播放旋转动画的阈值
@@ -188,6 +196,11 @@ private:
 	UPROPERTY()
 	class ABlasterPlayerState *BlasterPlayerState;
 
+	/*
+	* 手雷
+	*/
+	UPROPERTY(VisibleAnywhere)
+	UStaticMeshComponent *AttachedGrenade;
 public:	
 	void SetOverlappingWeapon(AWeapon *Weapon);
 	bool IsWeaponEquipped();
@@ -205,5 +218,6 @@ public:
 	ECombatState GetCombatState() const;
 	FORCEINLINE UCombatComponent *GetCombat() const { return Combat; }
 	FORCEINLINE bool GetDisableGameplay() const { return bDisableGameplay; }
-
+	FORCEINLINE UAnimMontage *GetReloadMontage() const { return ReloadMontage; }
+	FORCEINLINE UStaticMeshComponent *GetAttachedGrenade() const { return AttachedGrenade; }
 };

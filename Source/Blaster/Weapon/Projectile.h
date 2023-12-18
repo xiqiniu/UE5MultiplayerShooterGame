@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+ // Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -16,6 +16,10 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	void SpawnTrailSystem();
+	void StartDestroyTimer();
+	void DestroyTimerFinished();
+	void ExplodeDamage();
 
 	// DECLARE_DYNAMIC_MULTICAST_SPARSE_DELEGATE_FiveParams( FComponentHitSignature, UPrimitiveComponent, 
 	// OnComponentHit, UPrimitiveComponent*, HitComponent, AActor*, OtherActor, UPrimitiveComponent*, OtherComp, 
@@ -27,7 +31,14 @@ protected:
 	UPROPERTY(EditAnywhere)
 	float Damage = 20.f;
 
-private:
+	// 粒子效果
+	UPROPERTY(EditAnywhere)
+	class UParticleSystem *ImpactParticles;
+
+	// 音效
+	UPROPERTY(EditAnywhere)
+	class USoundCue *ImpactSound;
+
 	UPROPERTY(EditAnywhere)
 	class UBoxComponent *CollisionBox;
 
@@ -35,19 +46,36 @@ private:
 	class UProjectileMovementComponent *ProjectileMovementComponent;
 
 	UPROPERTY(EditAnywhere)
-	class UParticleSystem *Tracer;
+	class UNiagaraSystem *TrailSystem;
+
+	UPROPERTY()
+	class UNiagaraComponent *TrailSystemComponent;
+
+	UPROPERTY(VisibleAnywhere)
+	UStaticMeshComponent *ProjectileMesh;
+
+	// 爆炸类子弹的爆炸半径
+	UPROPERTY(EditAnywhere)
+	float DamageInnerRadius = 200.f;
+
+	UPROPERTY(EditAnywhere)
+	float DamageOuterRadius = 500.f;
+
+private:
+	UPROPERTY(EditAnywhere)
+	UParticleSystem *Tracer;
 
 	UPROPERTY()
 	class UParticleSystemComponent *TracerComponent;
+
+	/*
+	* 让尾迹在一段时间后消失
+	*/
+	FTimerHandle DestroyTimer;
+
+	UPROPERTY(EditAnywhere)
+	float DestroyTime = 3.f;
 	
-	// 粒子效果
-	UPROPERTY(EditAnywhere)
-	UParticleSystem *ImpactParticles;
-
-	// 音效
-	UPROPERTY(EditAnywhere)
-	class USoundCue *ImpactSound;
-
 public:	
 	virtual void Tick(float DeltaTime) override;
 	virtual void Destroyed() override;

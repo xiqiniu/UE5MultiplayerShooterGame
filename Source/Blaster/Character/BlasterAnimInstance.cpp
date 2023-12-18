@@ -39,12 +39,12 @@ void UBlasterAnimInstance::NativeUpdateAnimation(float DeltaTime)
 	TurningInPlace = BlasterCharacter->GetTurningInPlace();
 	bRotateRootBone = BlasterCharacter->ShouldRotateRootBone();
 	bElimmed = BlasterCharacter->IsElimmed();
-	// 装弹时不更改左手的位置
-	bUseFABRIK = BlasterCharacter->GetCombatState() != ECombatState::ECS_Reloading;
-	// 装弹时/禁用行动时不再使用AimOffsets更改枪口瞄准,
-	bUseAimOffsets = BlasterCharacter->GetCombatState() != ECombatState::ECS_Reloading && !BlasterCharacter->GetDisableGameplay();
-	// 装弹时/禁用行动时不再更改右手位置
-	bTransformRightHand = BlasterCharacter->GetCombatState() != ECombatState::ECS_Reloading && !BlasterCharacter->GetDisableGameplay();
+	// 装弹/投弹时不更改左手的位置
+	bUseFABRIK = BlasterCharacter->GetCombatState() == ECombatState::ECS_Unoccupied ;
+	// 装弹/投弹/禁用行动时不再使用AimOffsets更改枪口瞄准,
+	bUseAimOffsets = BlasterCharacter->GetCombatState() == ECombatState::ECS_Unoccupied && !BlasterCharacter->GetDisableGameplay();
+	// 装弹/投弹/禁用行动时不再更改右手位置
+	bTransformRightHand = BlasterCharacter->GetCombatState() == ECombatState::ECS_Unoccupied && !BlasterCharacter->GetDisableGameplay();
 
 	// Offset Yaw for Strafing
 	FRotator AimRotation = BlasterCharacter->GetBaseAimRotation();
