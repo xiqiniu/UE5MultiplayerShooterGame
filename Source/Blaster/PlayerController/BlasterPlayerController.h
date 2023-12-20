@@ -16,6 +16,7 @@ class BLASTER_API ABlasterPlayerController : public APlayerController
 
 public:
 	void SetHUDHealth(float Health, float MaxHealth);
+	void SetHUDShield(float Shield, float MaxShield);
 	void SetHUDScore(float Score);
 	void SetHUDDefeats(int32 Defeats);
 	void SetHUDWeaponAmmo(int32 Ammo);
@@ -68,6 +69,10 @@ protected:
 	UFUNCTION(Client, Reliable)
 	void ClientJoinMidgame(FName StateOfMatch, float Warmup, float Match, float Cooldown, float StartingTime);
 
+	// 显示延迟图标
+	void HighPingWarning();
+	void StopHighPingWarning();
+	void CheckPing(float DeltaTime);
 private:
 	UPROPERTY()
 	class ABlasterHUD *BlasterHUD;
@@ -95,11 +100,43 @@ private:
 	/*
 	* 设置失败时存下这些值,在CharacterOverlay有效后进行设置
 	*/
-	bool bInitializeCharacterOverlay = false;
 
 	float HUDHealth;
+	bool bInitializeHealth = false;
 	float HUDMaxHealth;
+
+	float HUDShield;
+	float HUDMaxShield;
+	bool bInitializeShield = false;
+
 	float HUDScore;
+	bool bInitializeScore = false;
+
 	int32 HUDDefeats;
+	bool bInitializeDefeats = false;
+
 	int32 HUDGrenades;
+	bool bInitializeGrenades  = false;
+
+	float HUDCarriedAmmo;
+	bool bInitializeCarriedAmmo = false;
+
+	float HUDWeaponAmmo;
+	bool bInitializeWeaponAmmo = false;
+
+	/*
+	* 延迟相关
+	*/
+	float HighPingRunningTime = 0.f;
+
+	UPROPERTY(EditAnywhere)
+	float HighPingDuration = 5.f;
+
+	UPROPERTY(EditAnywhere)
+	float CheckingPingFrequency = 20.f;
+
+	UPROPERTY(EditAnywhere)
+	float HighPingThreshold = 50.f;
+
+	float PingAnimationRunningTime = 0.f;
 };

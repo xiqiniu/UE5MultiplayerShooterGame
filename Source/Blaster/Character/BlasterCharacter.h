@@ -40,6 +40,12 @@ public:
 
 	UFUNCTION(BlueprintImplementableEvent)
 	void ShowSniperScopeWidget(bool bShowScope);
+
+	void UpdateHUDHealth();
+	void UpdateHUDShield();
+	void UpdateHUDAmmo();
+	void SpawnDefaultWeapon();
+
 protected:
 	virtual void BeginPlay() override;
 	void MoveForward(float Value);
@@ -59,12 +65,17 @@ protected:
 	void FireButtonPressed();
 	void FireButtonReleased();
 	void PlayHitReactMontage();
+	void DropOrDestroyWeapon(AWeapon *Weapon);
+	void DropOrDestroyWeapons();
+	void SwapWeapon();
+
+	UFUNCTION(Server, Reliable)
+	void ServerSwapWeapon();
 
 	UFUNCTION()
 	void ReceiveDamage(AActor *DamagedActor, float Damage, const UDamageType *DamageType, 
 		class AController * InstigatorController,AActor *DamageCauser);
 
-	void UpdateHUDHealth();
 	// 初始化与HUD相关的类
 	void PollInit();
 	void RotateInPlace(float DeltaTime);
@@ -87,6 +98,9 @@ private:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	class UCombatComponent *Combat;
+
+	UPROPERTY(VisibleAnywhere)
+	class UBuffComponent *Buff;
 
 	UFUNCTION(Server, Reliable)
 	void ServerEquipButtonPressed();
@@ -142,9 +156,20 @@ private:
 	float MaxHealth = 100.f;
 
 	UFUNCTION()
-	void OnRep_Health();
+	void OnRep_Health(float LastHealth);
+
+	//护盾
+	UPROPERTY(ReplicatedUsing = OnRep_Shield, EditAnywhere, Category = "Player Stats")
+	float Shield = 0.f;
+
+	UPROPERTY(EditAnywhere, Category = "Player Stats")
+	float MaxShield = 100.f;
+
+	UFUNCTION()
+	void OnRep_Shield(float LastShield);
 
 	bool bElimmed = false;
+
 
 	// 重生
 	FTimerHandle ElimTimer;
@@ -201,6 +226,13 @@ private:
 	*/
 	UPROPERTY(VisibleAnywhere)
 	UStaticMeshComponent *AttachedGrenade;
+
+	/*
+	* 默认武器
+	*/
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<AWeapon> DefaultWeaponClass;
+
 public:	
 	void SetOverlappingWeapon(AWeapon *Weapon);
 	bool IsWeaponEquipped();
@@ -213,10 +245,15 @@ public:
 	FORCEINLINE UCameraComponent *GetFollowCamera() const { return FollowCamera; }
 	FORCEINLINE bool ShouldRotateRootBone() const { return bRotateRootBone; }
 	FORCEINLINE bool IsElimmed() const { return bElimmed; }
+	FORCEINLINE void SetHealth(float Amount) { Health = Amount;}
 	FORCEINLINE float GetHealth() const { return Health; }
 	FORCEINLINE float GetMaxHealth() const { return MaxHealth; }
+	FORCEINLINE void SetShield(float Amount) { Shield = Amount; }
+	FORCEINLINE float GetShield() const { return Shield; }
+	FORCEINLINE float GetMaxShield() const { return MaxShield; }
 	ECombatState GetCombatState() const;
 	FORCEINLINE UCombatComponent *GetCombat() const { return Combat; }
+	FORCEINLINE UBuffComponent *GetBuff() const { return Buff; }
 	FORCEINLINE bool GetDisableGameplay() const { return bDisableGameplay; }
 	FORCEINLINE UAnimMontage *GetReloadMontage() const { return ReloadMontage; }
 	FORCEINLINE UStaticMeshComponent *GetAttachedGrenade() const { return AttachedGrenade; }

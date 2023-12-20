@@ -19,6 +19,7 @@ public:
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty> &OutLifetimeProps) const override;
 	void EquipWeapon(class AWeapon *WeaponToEquip);
+	void SwapWeapons();
 	void Reload();
 
 	// 利用动画通知调用,所以要写成BlueprintCallable
@@ -39,6 +40,8 @@ public:
 	 
 	UFUNCTION(Server, Reliable)
 	void ServerLaunchGrenade(const FVector_NetQuantize &Target);
+
+	void PickupAmmo(EWeaponType WeaponType, int32 AmmoAmount);
 protected:
 	virtual void BeginPlay() override;
 
@@ -50,13 +53,17 @@ protected:
 	UFUNCTION()
 	void OnRep_EquippedWeapon();
 
+	UFUNCTION()
+	void OnRep_SecondaryWeapon();
+
 	void Fire();
+	void LocalFire(const FVector_NetQuantize &TraceHitTarget);
 
 	UFUNCTION(Server, Reliable)
-	void ServerFire(const FVector_NetQuantize &TraceHitResult);
+	void ServerFire(const FVector_NetQuantize &TraceHitTarget);
 
 	UFUNCTION(NetMulticast, Reliable)
-	void MulticastFire(const FVector_NetQuantize &TraceHitResult);
+	void MulticastFire(const FVector_NetQuantize &TraceHitTarget);
 
 	void ThrowGrenade();
 
@@ -80,10 +87,14 @@ protected:
 	void DropEquippedWeapon();
 	void AttachActorToRightHand(AActor *ActorToAttach);
 	void AttachActorToLeftHand(AActor *ActorToAttach);
+	void AttachActorToBackpack(AActor *ActorToAttach);
 	void UpdateCarriedAmmo();
-	void PlayEquippedWeaponSound();
+	void PlayEquippedWeaponSound(AWeapon *WeaponToEquip);
 	void ReloadEmptyWeapon();
 	void ShowAttachedGrenade(bool bShowGrenade);
+
+	void EquipPrimaryWeapon(AWeapon *WeaponToEquip);
+	void EquipSecondaryWeapon(AWeapon *WeaponToEquip);
 private:
 	UPROPERTY()
 	class ABlasterCharacter *Character;
@@ -96,6 +107,9 @@ private:
 
 	UPROPERTY(ReplicatedUsing = OnRep_EquippedWeapon)
 	class AWeapon *EquippedWeapon;
+
+	UPROPERTY(ReplicatedUsing = OnRep_SecondaryWeapon)
+	AWeapon *SecondaryWeapon;
 
 	UPROPERTY(Replicated)
 	bool bAiming;
@@ -155,6 +169,9 @@ private:
 	TMap<EWeaponType, int32> CarriedAmmoMap;
 
 	UPROPERTY(EditAnywhere)
+	int32 MaxCarriedAmmo = 500;
+
+	UPROPERTY(EditAnywhere)
 	int32 StartingARAmmo = 30;
 
 	UPROPERTY(EditAnywhere)
@@ -198,4 +215,5 @@ private:
 	void UpdateHUDGrenades();
 public:	
 	FORCEINLINE int32 GetGrenades() const { return Grenades; }
+	bool ShouldSwapWeapons();
 };
