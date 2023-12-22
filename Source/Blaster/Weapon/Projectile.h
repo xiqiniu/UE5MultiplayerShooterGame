@@ -14,6 +14,20 @@ class BLASTER_API AProjectile : public AActor
 public:	
 	AProjectile();
 
+	/*
+	* 用于服务器回退
+	*/
+	bool bUseServerSideRewind = false;
+
+	FVector_NetQuantize TraceStart;
+	// InitialVelocity包含方向的信息,使用NetQuantize100更为精确
+	FVector_NetQuantize100 InitialVelocity;
+	
+	UPROPERTY(EditAnywhere)
+	float InitialSpeed = 15000.f;
+
+	// 伤害
+	float Damage = 20.f;
 protected:
 	virtual void BeginPlay() override;
 	void SpawnTrailSystem();
@@ -26,10 +40,6 @@ protected:
 	// FVector, NormalImpulse, const FHitResult&, Hit );
 	UFUNCTION()
 	virtual void OnHit(UPrimitiveComponent *HitComp, AActor *OtherActor, UPrimitiveComponent *OtherComp, FVector NormalImpulse, const FHitResult &Hit);
-
-	// 伤害
-	UPROPERTY(EditAnywhere)
-	float Damage = 20.f;
 
 	// 粒子效果
 	UPROPERTY(EditAnywhere)

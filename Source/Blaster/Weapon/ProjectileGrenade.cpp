@@ -14,6 +14,8 @@ AProjectileGrenade::AProjectileGrenade()
 	ProjectileMovementComponent = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovementComponent"));
 	ProjectileMovementComponent->bRotationFollowsVelocity = true;
 	ProjectileMovementComponent->SetIsReplicated(true);
+	ProjectileMovementComponent->InitialSpeed = InitialSpeed;
+	ProjectileMovementComponent->MaxSpeed = InitialSpeed;
 
 	// ÔÊÐí×Óµ¯·´µ¯
 	ProjectileMovementComponent->bShouldBounce = true;
@@ -46,4 +48,19 @@ void AProjectileGrenade::Destroyed()
 	ExplodeDamage();
 
 	Super::Destroyed();
+}
+
+void AProjectileGrenade::PostEditChangeProperty(FPropertyChangedEvent &Event)
+{
+	Super::PostEditChangeProperty(Event);
+
+	FName PropertyName = Event.Property != nullptr ? Event.Property->GetFName() : NAME_None;
+	if (PropertyName == GET_MEMBER_NAME_CHECKED(AProjectileGrenade, InitialSpeed))
+	{
+		if (ProjectileMovementComponent)
+		{
+			ProjectileMovementComponent->InitialSpeed = InitialSpeed;
+			ProjectileMovementComponent->MaxSpeed = InitialSpeed;
+		}
+	}
 }

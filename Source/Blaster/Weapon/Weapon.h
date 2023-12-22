@@ -7,6 +7,14 @@
 #include "WeaponTypes.h"
 #include "Weapon.generated.h"
 
+UENUM(BlueprintType)
+enum class EFireType : uint8 
+{
+	EFT_HitScan UMETA(DiaplayName = "Hit Scan Weapon"),
+	EFT_Projectle UMETA(DiaplayName = "Projectile Weapon"),
+	EFT_Shotgun UMETA(DiaplayName = "Shotgun Weapon"),
+	EFT_Max UMETA(DiaplayName = "DefaultMAX")
+};
 
 UENUM(BlueprintType)
 enum class EWeaponState : uint8 
@@ -82,6 +90,14 @@ public:
 	// 销毁玩家出生自带的武器
 	bool bDestroyWeapon = false;
 
+	UPROPERTY(EditAnywhere)
+	EFireType FireType;
+
+	UPROPERTY(EditAnywhere, Category = "Weapon Scatter")
+	bool bUseScatter = false;
+
+	FVector TraceEndWithScatter(const FVector &HitTarget);
+
 protected:
 	virtual void BeginPlay() override;	
 	virtual void OnWeaponStateSet();
@@ -96,6 +112,29 @@ protected:
 	void OnSphereEndOverlap(UPrimitiveComponent *OverlappedComponent, AActor *OtherActor, UPrimitiveComponent *OtherComp,
 		int32 OtherBodyIndex);
 	
+	/*
+	* 散射
+	*/
+	UPROPERTY(EditAnywhere, Category = "Weapon Scatter")
+	float DistanceToSphere = 800.f;
+
+	UPROPERTY(EditAnywhere, Category = "Weapon Scatter")
+	float SphereRadius = 75.f;
+
+	UPROPERTY(EditAnywhere)
+	float Damage = 20.f;
+
+	UPROPERTY(Replicated, EditAnywhere)
+	bool bUseServerSideRewind = false;
+
+	UPROPERTY()
+	class ABlasterCharacter *BlasterOwnerCharacter;
+
+	UPROPERTY()
+	class ABlasterPlayerController *BlasterOwnerController;
+
+	UFUNCTION()
+	void OnPingTooHigh(bool bPingTooHigh);
 private:
 	UPROPERTY(VisibleAnywhere, Category = "Weapon Properties")
 	USkeletalMeshComponent *WeaponMesh;
@@ -122,22 +161,23 @@ private:
 	/*
 	* 子弹
 	*/
-	UPROPERTY(ReplicatedUsing = OnRep_Ammo, EditAnywhere)
+	UPROPERTY(EditAnywhere)
 	int32 Ammo;
 	
-	UFUNCTION()
-	void OnRep_Ammo();
-
 	UPROPERTY(EditAnywhere)
 	int32 MagCapacity;
 
+	// 未处理的服务器请求数量
+	// 在SpendRound中增加, 在ClientUpdateAmmo中减少
+	int32 Sequence = 0;
+
 	void SpendRound();
 
-	UPROPERTY()
-	class ABlasterCharacter *BlasterOwnerCharacter;
+	UFUNCTION(Client, Reliable)
+	void ClientUpdateAmmo(int32 ServerAmmo);
 
-	UPROPERTY()
-	class ABlasterPlayerController *BlasterOwnerController;
+	UFUNCTION(Client, Reliable)
+	void ClientAddAmmo(int32 AmmoToAdd);
 
 	UPROPERTY(EditAnywhere)
 	EWeaponType WeaponType;
@@ -154,5 +194,5 @@ public:
 	FORCEINLINE EWeaponType GetWeaponType() const { return WeaponType; }
 	FORCEINLINE int32 GetAmmo() const { return Ammo; }
 	FORCEINLINE int32 GetMagCapacity() const { return MagCapacity; }
-
+	FORCEINLINE float GetDamage() const { return Damage; }
 };

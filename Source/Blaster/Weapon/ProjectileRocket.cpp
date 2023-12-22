@@ -19,6 +19,8 @@ AProjectileRocket::AProjectileRocket()
 	RocketMovementComponent = CreateDefaultSubobject<URocketMovementComponent>(TEXT("RocketMovementComponent"));
 	RocketMovementComponent->bRotationFollowsVelocity = true;
 	RocketMovementComponent->SetIsReplicated(true);
+	RocketMovementComponent->InitialSpeed = InitialSpeed;
+	RocketMovementComponent->MaxSpeed = InitialSpeed;
 }
 
 void AProjectileRocket::BeginPlay()
@@ -107,6 +109,22 @@ void AProjectileRocket::OnHit(UPrimitiveComponent *HitComp, AActor *OtherActor, 
 // 避免父类的Destroyed调用时触发爆炸效果和音效
 void AProjectileRocket::Destroyed()
 {
+
+}
+
+void AProjectileRocket::PostEditChangeProperty(FPropertyChangedEvent &Event)
+{
+	Super::PostEditChangeProperty(Event);
+
+	FName PropertyName = Event.Property != nullptr ? Event.Property->GetFName() : NAME_None;
+	if (PropertyName == GET_MEMBER_NAME_CHECKED(AProjectileRocket, InitialSpeed))
+	{
+		if (RocketMovementComponent)
+		{
+			RocketMovementComponent->InitialSpeed = InitialSpeed;
+			RocketMovementComponent->MaxSpeed = InitialSpeed;
+		}
+	}
 
 }
 

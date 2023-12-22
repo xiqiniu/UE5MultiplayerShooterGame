@@ -16,6 +16,11 @@ class BLASTER_API AProjectileGrenade : public AProjectile
 public:
 	AProjectileGrenade();
 	virtual void Destroyed() override;
+
+#if WITH_EDITOR
+	virtual void PostEditChangeProperty(struct FPropertyChangedEvent &Event) override;
+#endif
+
 protected:
 	virtual void BeginPlay() override;
 

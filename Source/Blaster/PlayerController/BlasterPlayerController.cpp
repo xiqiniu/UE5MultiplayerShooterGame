@@ -15,6 +15,7 @@
 #include "Blaster/GameState/BlasterGameState.h"
 #include "Blaster/PlayerState/BlasterPlayerState.h"
 #include "Components/Image.h"
+
 void ABlasterPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
@@ -59,11 +60,17 @@ void ABlasterPlayerController::CheckPing(float DeltaTime)
 		PlayerState = PlayerState == nullptr ? GetPlayerState<APlayerState>() : PlayerState;
 		if (PlayerState)
 		{
+			UE_LOG(LogTemp, Warning, TEXT("PlayerState->GetPing() * 4 : %d"), PlayerState->GetPing() * 4);
 			// GetPing()得到的是压缩过的,是原本Ping的四分之一
 			if (PlayerState->GetPing() * 4 > HighPingThreshold)
 			{
 				HighPingWarning();
 				PingAnimationRunningTime = 0.f;
+				ServerReportPingStatus(true);
+			}
+			else
+			{
+				ServerReportPingStatus(false);
 			}
 			HighPingRunningTime = 0.f;
 		}
@@ -77,7 +84,9 @@ void ABlasterPlayerController::CheckPing(float DeltaTime)
 			StopHighPingWarning();
 		}
 	}
-} 
+}
+
+
 
 void ABlasterPlayerController::ServerCheckMatchState_Implementation()
 {
@@ -363,8 +372,10 @@ void ABlasterPlayerController::ServerRequestServerTime_Implementation(float Time
 void ABlasterPlayerController::ClientReportServerTime_Implementation(float TimeOfClientRequest, float TimeServerReceivedClientRequest)
 {
 	float RoundTripTime = GetWorld()->GetTimeSeconds() - TimeOfClientRequest;
+	SingleTripTime = 0.5f * RoundTripTime;
 	float CurrentServerTime = TimeServerReceivedClientRequest + RoundTripTime * 0.5f;
 	ClientServerDelta = CurrentServerTime - GetWorld()->GetTimeSeconds();
+
 }
 
 float ABlasterPlayerController::GetServerTime() const
@@ -406,6 +417,11 @@ void ABlasterPlayerController::OnRep_MatchState()
 	{
 		HandleCooldown();
 	}
+}
+
+void ABlasterPlayerController::ServerReportPingStatus_Implementation(bool bHighPing)
+{
+	HighPingDelegate.Broadcast(bHighPing);
 }
 
 void ABlasterPlayerController::HandleMatchHasStarted()

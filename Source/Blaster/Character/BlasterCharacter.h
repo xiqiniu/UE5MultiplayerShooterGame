@@ -21,10 +21,15 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent *PlayerInputComponent) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty> &OutLifetimeProps) const override;
 	virtual void PostInitializeComponents() override;
+
+	/*
+	* 播放蒙太奇
+	*/
 	void PlayFireMontage(bool bAiming);
 	void PlayReloadMontage();
 	void PlayElimMontage();
 	void PlayThrowGrenadeMontage();
+	void PlaySwapMontage();
 	virtual void OnRep_ReplicatedMovement() override;
 
 	UPROPERTY(Replicated)
@@ -46,6 +51,10 @@ public:
 	void UpdateHUDAmmo();
 	void SpawnDefaultWeapon();
 
+	UPROPERTY()
+	TMap<FName, class UBoxComponent *> HitCollisionBoxes;
+
+	
 protected:
 	virtual void BeginPlay() override;
 	void MoveForward(float Value);
@@ -79,7 +88,63 @@ protected:
 	// 初始化与HUD相关的类
 	void PollInit();
 	void RotateInPlace(float DeltaTime);
+	
+	/*
+	* 用于服务器倒带的碰撞盒
+	*/
+	UPROPERTY(EditAnywhere)
+	class UBoxComponent *head;
 
+	UPROPERTY(EditAnywhere)
+	UBoxComponent *pelvis;
+
+	UPROPERTY(EditAnywhere)
+	UBoxComponent *spine_02;
+
+	UPROPERTY(EditAnywhere)
+	UBoxComponent *spine_03;
+
+	UPROPERTY(EditAnywhere)
+	UBoxComponent *upperarm_l;
+
+	UPROPERTY(EditAnywhere)
+	UBoxComponent *upperarm_r;
+
+	UPROPERTY(EditAnywhere)
+	UBoxComponent *lowerarm_l;
+
+	UPROPERTY(EditAnywhere)
+	UBoxComponent *lowerarm_r;
+
+	UPROPERTY(EditAnywhere)
+	UBoxComponent *hand_l;
+
+	UPROPERTY(EditAnywhere)
+	UBoxComponent *hand_r;
+
+	UPROPERTY(EditAnywhere)
+	UBoxComponent *backpack;
+
+	UPROPERTY(EditAnywhere)
+	UBoxComponent *blanket;
+
+	UPROPERTY(EditAnywhere)
+	UBoxComponent *thigh_l;
+
+	UPROPERTY(EditAnywhere)
+	UBoxComponent *thigh_r;
+
+	UPROPERTY(EditAnywhere)
+	UBoxComponent *calf_l;
+
+	UPROPERTY(EditAnywhere)
+	UBoxComponent *calf_r;
+
+	UPROPERTY(EditAnywhere)
+	UBoxComponent *foot_l;
+
+	UPROPERTY(EditAnywhere)
+	UBoxComponent *foot_r;
 private:
 	UPROPERTY(VisibleAnywhere, Category = Camera)
 	class USpringArmComponent *CameraBoom;
@@ -96,8 +161,14 @@ private:
 	UFUNCTION()
 	void OnRep_OverlappingWeapon(AWeapon *LastWeapon);
 
+	/*
+	*  Blaster组件
+	*/
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	class UCombatComponent *Combat;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	class ULagCompensationComponent *LagCompensation;
 
 	UPROPERTY(VisibleAnywhere)
 	class UBuffComponent *Buff;
@@ -134,6 +205,9 @@ private:
 
 	UPROPERTY(EditAnywhere, Category = Combat)
 	UAnimMontage *ThrowGrenadeMontage;
+
+	UPROPERTY(EditAnywhere, Category = Combat)
+	UAnimMontage *SwapMontage;
 
 	bool bRotateRootBone;
 	// 设置simulated的角色播放旋转动画的阈值
@@ -257,4 +331,7 @@ public:
 	FORCEINLINE bool GetDisableGameplay() const { return bDisableGameplay; }
 	FORCEINLINE UAnimMontage *GetReloadMontage() const { return ReloadMontage; }
 	FORCEINLINE UStaticMeshComponent *GetAttachedGrenade() const { return AttachedGrenade; }
+	bool IsLocallyReloading() const;
+	bool IsLocallySwapping() const;
+	FORCEINLINE ULagCompensationComponent *GetLagCompensation() const { return LagCompensation; }
 };

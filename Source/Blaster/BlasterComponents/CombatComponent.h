@@ -25,6 +25,12 @@ public:
 	// 利用动画通知调用,所以要写成BlueprintCallable
 	UFUNCTION(BlueprintCallable)
 	void FinishReloading();
+
+	UFUNCTION(BlueprintCallable)
+	void FinishSwap();
+
+	UFUNCTION(BlueprintCallable)
+	void FinishSwapAttachWeapon();
 	void FireButtonPressed(bool bPressed);
 
 	UFUNCTION(BlueprintCallable)
@@ -42,6 +48,11 @@ public:
 	void ServerLaunchGrenade(const FVector_NetQuantize &Target);
 
 	void PickupAmmo(EWeaponType WeaponType, int32 AmmoAmount);
+
+	// 用于处理本地播放装弹动画时禁用fabric移动左手
+	bool bLocallyReloading = false;
+
+	bool bLocallySwapping = false;
 protected:
 	virtual void BeginPlay() override;
 
@@ -57,13 +68,22 @@ protected:
 	void OnRep_SecondaryWeapon();
 
 	void Fire();
+	void FireProjectileWeapon();
+	void FireHitScanWeapon();
+	void FireShotgun();
 	void LocalFire(const FVector_NetQuantize &TraceHitTarget);
-
-	UFUNCTION(Server, Reliable)
-	void ServerFire(const FVector_NetQuantize &TraceHitTarget);
+	void ShotgunLocalFire(const TArray<FVector_NetQuantize> &TraceHitTargets);
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerFire(const FVector_NetQuantize &TraceHitTarget, float FireDelay);
 
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastFire(const FVector_NetQuantize &TraceHitTarget);
+
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerShotgunFire(const TArray<FVector_NetQuantize> &TraceHitTargets, float FireDelay);
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastShotgunFire(const TArray<FVector_NetQuantize> &TraceHitTargets);
 
 	void ThrowGrenade();
 
@@ -111,9 +131,15 @@ private:
 	UPROPERTY(ReplicatedUsing = OnRep_SecondaryWeapon)
 	AWeapon *SecondaryWeapon;
 
-	UPROPERTY(Replicated)
-	bool bAiming;
+	UPROPERTY(ReplicatedUsing = OnRep_Aiming)
+	bool bAiming = false;
 
+	bool bAimButtonPressed = false;
+
+	UFUNCTION()
+	void OnRep_Aiming();
+
+	
 	UPROPERTY(EditAnywhere)
 	float BaseWalkSpeed;
 
