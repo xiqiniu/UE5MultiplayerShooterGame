@@ -8,7 +8,10 @@
 #include "Blaster/Interfaces/InteractWithCrosshairsInterface.h"
 #include "Components/TimelineComponent.h"
 #include "Blaster/BlasterTypes/CombatState.h"
+#include "Blaster/BlasterTypes/Team.h"
 #include "BlasterCharacter.generated.h"
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnLeftGame);
 
 UCLASS()
 class BLASTER_API ABlasterCharacter : public ACharacter, public IInteractWithCrosshairsInterface
@@ -36,10 +39,10 @@ public:
 	bool bDisableGameplay = false;
 
 	// 玩家死亡
-	void Elim();
+	void Elim(bool bPlayerLeftGame);
 
 	UFUNCTION(NetMultiCast, Reliable)
-	void MulticastElim();
+	void MulticastElim(bool bPlayerLeftGame);
 
 	virtual void Destroyed() override;
 
@@ -54,13 +57,26 @@ public:
 	UPROPERTY()
 	TMap<FName, class UBoxComponent *> HitCollisionBoxes;
 
-	
+	UFUNCTION(Server, Reliable)
+	void ServerLeaveGame();
+
+	FOnLeftGame OnLeftGame;
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastGainedTheLead();
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastLostTheLead();
+
+	void SetTeamColor(ETeam Team);
 protected:
 	virtual void BeginPlay() override;
 	void MoveForward(float Value);
 	void MoveRight(float Value);
 	void Turn(float Value);
 	void LookUp(float Value);
+	void RunButtonPressed();
+	void RunButtonReleased();
 	void EquipButtonPressed();
 	void CrouchButtonPressed();
 	void ReloadButtonPressed();
@@ -77,6 +93,8 @@ protected:
 	void DropOrDestroyWeapon(AWeapon *Weapon);
 	void DropOrDestroyWeapons();
 	void SwapWeapon();
+	void SetSpawnPoint();
+	void OnPlayerStateInitialized();
 
 	UFUNCTION(Server, Reliable)
 	void ServerSwapWeapon();
@@ -145,7 +163,14 @@ protected:
 
 	UPROPERTY(EditAnywhere)
 	UBoxComponent *foot_r;
+
 private:
+	// 奔跑速度
+	UPROPERTY(EditAnywhere)
+	float RunSpeed = 800.f;
+	
+	float MaxWalkSpeed = 600.f;
+
 	UPROPERTY(VisibleAnywhere, Category = Camera)
 	class USpringArmComponent *CameraBoom;
 
@@ -253,6 +278,8 @@ private:
 
 	void ElimTimerFinished();
 
+	bool bLeftGame = false;
+
 	/*
 	* 溶解效果
 	*/
@@ -274,11 +301,32 @@ private:
 	UMaterialInstanceDynamic *DynamicDissolveMaterialInstance;
 
 	// 蓝图中设置的MI
-	UPROPERTY(EditAnywhere, Category = Elim)
+	UPROPERTY(VisibleAnywhere, Category = Elim)
 	UMaterialInstance *DissolveMaterialInstance;
 
 	/*
-	* Elim Bot
+	* 团队颜色
+	*/
+	UPROPERTY(EditAnywhere, Category = Elim)
+	UMaterialInstance *RedDissolveMatInst;	
+	
+	UPROPERTY(EditAnywhere, Category = Elim)
+	UMaterialInstance *RedMaterial;
+
+	UPROPERTY(EditAnywhere, Category = Elim)
+	UMaterialInstance *BlueDissolveMatInst;
+
+	UPROPERTY(EditAnywhere, Category = Elim)
+	UMaterialInstance *BlueMaterial;
+
+	UPROPERTY(EditAnywhere, Category = Elim)
+	UMaterialInstance *OriginalMaterial;
+
+	UPROPERTY(EditAnywhere, Category = Elim)
+	UMaterialInstance *OriginalDissolveMatInst;
+
+	/*
+	* 死亡时头上的机器人
 	*/
 	UPROPERTY(EditAnywhere, Category = Elim)
 	UParticleSystem *ElimBotEffect;
@@ -295,6 +343,12 @@ private:
 	UPROPERTY()
 	class ABlasterPlayerState *BlasterPlayerState;
 
+	UPROPERTY(EditAnywhere)
+	class UNiagaraSystem *CrownSystem;
+
+	UPROPERTY()
+	class UNiagaraComponent *CrownComponent;
+
 	/*
 	* 手雷
 	*/
@@ -306,6 +360,9 @@ private:
 	*/
 	UPROPERTY(EditAnywhere)
 	TSubclassOf<AWeapon> DefaultWeaponClass;
+
+	UPROPERTY()
+	class ABlasterGameMode *BlasterGameMode;
 
 public:	
 	void SetOverlappingWeapon(AWeapon *Weapon);
@@ -334,4 +391,7 @@ public:
 	bool IsLocallyReloading() const;
 	bool IsLocallySwapping() const;
 	FORCEINLINE ULagCompensationComponent *GetLagCompensation() const { return LagCompensation; }
+	bool IsHoldingTheFlag() const;
+	ETeam GetTeam();
+	void SetHoldingTheFlag(bool bHolding);
 };

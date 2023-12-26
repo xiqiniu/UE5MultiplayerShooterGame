@@ -14,8 +14,12 @@ APickupSpawnPoint::APickupSpawnPoint()
 void APickupSpawnPoint::BeginPlay()
 {
 	Super::BeginPlay();
-
-	StartPickupTimer((AActor*)nullptr);
+	
+	if (HasAuthority())
+	{
+		SpawnPickup();
+	}
+	//StartPickupTimer((AActor*)nullptr);
 }
 
 void APickupSpawnPoint::Tick(float DeltaTime)

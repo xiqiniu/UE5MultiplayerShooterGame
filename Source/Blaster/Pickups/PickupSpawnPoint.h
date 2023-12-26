@@ -39,7 +39,6 @@ private:
 	UPROPERTY(EditAnywhere)
 	float SpawnPickupTimeMax;
 
-
 public:	
 
 };

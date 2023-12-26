@@ -37,9 +37,11 @@ void AHitScanWeapon::Fire(const FVector &HitTarget)
 				// 如果使用了SSR,服务器上的非本地控制的角色就不应该再造成一边伤害了
 				if (HasAuthority() && bCauseAuthDamage)
 				{
+					const float DamageToCause = FireHit.BoneName.ToString() == FString("head") ? HeadShotDamage : Damage;
+
 					UGameplayStatics::ApplyDamage(
 						BlasterCharacter,
-						Damage,
+						DamageToCause,
 						InstigatorController,
 						this,
 						UDamageType::StaticClass()
@@ -118,7 +120,12 @@ void AHitScanWeapon::WeaponTraceHit(const FVector &TraceStart, const FVector &Hi
 		{
 			BeamEnd = OutHit.ImpactPoint;
 		}
-		DrawDebugSphere(GetWorld(), BeamEnd, 16.f, 12, FColor::Orange, true);
+		else
+		{
+			OutHit.ImpactPoint = End;
+		}
+		//DrawDebugSphere(GetWorld(), BeamEnd, 16.f, 12, FColor::Orange, true);
+
 		if (BeamParticles)
 		{
 			UParticleSystemComponent *Beam = UGameplayStatics::SpawnEmitterAtLocation(

@@ -18,6 +18,7 @@ class BLASTER_API ABlasterPlayerController : public APlayerController
 	GENERATED_BODY()
 
 public:
+
 	void SetHUDHealth(float Health, float MaxHealth);
 	void SetHUDShield(float Shield, float MaxShield);
 	void SetHUDScore(float Score);
@@ -31,15 +32,23 @@ public:
 	virtual float GetServerTime() const; 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty> &OutLifetimeProps) const override;
 
-	virtual void ReceivedPlayer() override; // 客户端加入后尽快与服务器时钟同步
-	void OnMatchStateSet(FName State);
+	void HideTeamScores();
+	void InitTeamScores();
+	void SetHUDRedTeamScores(int32 RedScore);
+	void SetHUDBlueTeamScores(int32 BlueScore);
 
-	void HandleMatchHasStarted();
+	virtual void ReceivedPlayer() override; // 客户端加入后尽快与服务器时钟同步
+	void OnMatchStateSet(FName State, bool bTeamsMatch = false);
+
+	void HandleMatchHasStarted(bool bTeamsMatch = false);
 	void HandleCooldown();
 
 	float SingleTripTime = 0.f;
 	FHighPingDelegate HighPingDelegate;
+
+	void BroadcastElim(APlayerState *Attacker, APlayerState *Victim);
 protected:
+	virtual void SetupInputComponent() override;
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
 	void SetHUDTime();
@@ -72,19 +81,40 @@ protected:
 
 	// 用来在玩家加入游戏时从服务器传递游戏当前状态的Client RPC
 	UFUNCTION(Client, Reliable)
-	void ClientJoinMidgame(FName StateOfMatch, float Warmup, float Match, float Cooldown, float StartingTime);
+	void ClientJoinMidgame(FName StateOfMatch, float Warmup, float Match, float Cooldown, float StartingTime, bool bTeamMatch);
 
 	// 显示延迟图标
 	void HighPingWarning();
 	void StopHighPingWarning();
 	void CheckPing(float DeltaTime);
 
+	void ShowReturnToMainMenu();
+
+	UFUNCTION(Client, Reliable)
+	void ClientElimAnnouncement(APlayerState *Attacker, APlayerState *Victim);
+
+	bool bShowTeamScores = false;
+
+	FText GetInfoText(const TArray<class ABlasterPlayerState *> &Players);
+	FText GetTeamsInfoText(class ABlasterGameState *BlasterGameState);
 private:
 	UPROPERTY()
 	class ABlasterHUD *BlasterHUD;
 	
+	/*
+	* 回到主菜单
+	*/
+	UPROPERTY(EditAnywhere, Category = HUD)
+	TSubclassOf<class UUserWidget> ReturnToMainMenuWidget;
+
+	UPROPERTY()
+	class UReturnToMainMenu *ReturnToMainMenu;
+
+	bool bReturnToMainMenuOpen = false;
+
 	UPROPERTY()
 	class ABlasterGameMode *BlasterGameMode;
+
 	/*
 	* 与游戏状态相关的时间
 	*/
@@ -130,6 +160,8 @@ private:
 	float HUDWeaponAmmo;
 	bool bInitializeWeaponAmmo = false;
 
+	bool bInitializeTeamScores = false;
+
 	/*
 	* 延迟相关
 	*/
@@ -148,4 +180,7 @@ private:
 	float HighPingThreshold = 50.f;
 
 	float PingAnimationRunningTime = 0.f;
+
+	/*UFUNCTION()
+	void OnSkipWarmupChanged(bool bSkipWarmup);*/
 };

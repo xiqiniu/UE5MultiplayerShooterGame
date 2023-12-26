@@ -26,8 +26,13 @@ public:
 	UPROPERTY(EditAnywhere)
 	float InitialSpeed = 15000.f;
 
-	// 伤害
+	// 只用于设置手雷和火箭的伤害
+	UPROPERTY(EditAnywhere)
 	float Damage = 20.f;
+
+	// 对手雷和火箭不起作用
+	UPROPERTY(EditAnywhere)
+	float HeadShotDamage = 40.f;
 protected:
 	virtual void BeginPlay() override;
 	void SpawnTrailSystem();

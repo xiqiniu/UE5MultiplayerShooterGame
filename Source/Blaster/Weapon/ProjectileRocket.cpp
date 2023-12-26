@@ -112,6 +112,7 @@ void AProjectileRocket::Destroyed()
 
 }
 
+#if WITH_EDITOR
 void AProjectileRocket::PostEditChangeProperty(FPropertyChangedEvent &Event)
 {
 	Super::PostEditChangeProperty(Event);
@@ -125,6 +126,6 @@ void AProjectileRocket::PostEditChangeProperty(FPropertyChangedEvent &Event)
 			RocketMovementComponent->MaxSpeed = InitialSpeed;
 		}
 	}
-
 }
+#endif
 

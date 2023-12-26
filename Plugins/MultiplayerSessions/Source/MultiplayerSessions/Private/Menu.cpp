@@ -6,7 +6,7 @@
 #include"MultiplayerSessionsSubsystem.h"
 #include"OnlineSessionSettings.h"
 #include "OnlineSubsystem.h"
-
+#include "Kismet/KismetSystemLibrary.h"
 void UMenu::MenuSetup(int32 NumberOfPublicConnections, FString TypeofMatch, FString LobbyPath)
 {
 	PathToLobby = FString::Printf(TEXT("%s?listen"), *LobbyPath);
@@ -61,6 +61,11 @@ bool UMenu::Initialize()
 	if (JoinButton)
 	{
 		JoinButton->OnClicked.AddDynamic(this, &UMenu::JoinButtonClicked);
+	}
+
+	if (QuitButton)
+	{
+		QuitButton->OnClicked.AddDynamic(this, &UMenu::QuitButtonClicked);
 	}
 	return true;
 }
@@ -133,10 +138,29 @@ void UMenu::OnJoinSession(EOnJoinSessionCompleteResult::Type Result)
 			{
 				PlayerController->ClientTravel(Address, ETravelType::TRAVEL_Absolute);
 			}
+			else
+			{
+				if (GEngine)
+				{
+					GEngine->AddOnScreenDebugMessage(-1, 15.f, FColor::Red, FString(TEXT("PlayerController Is Not Valid")));
+				}
+			}
+		}
+		else
+		{
+			if (GEngine)
+			{
+				GEngine->AddOnScreenDebugMessage(-1, 15.f, FColor::Red, FString(TEXT("SessionInterface Is Not Valid")));
+			}
 		}
 	}
+
 	if (Result != EOnJoinSessionCompleteResult::Success)
 	{
+		if (GEngine)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 15.f, FColor::Red, FString(TEXT("Failed to join session")));
+		}
 		JoinButton->SetIsEnabled(true);
 	}
 }
@@ -166,6 +190,11 @@ void UMenu::JoinButtonClicked()
 	{
 		MultiplayerSessionsSubsystem->FindSessions(10000);
 	}
+}
+
+void UMenu::QuitButtonClicked()
+{
+	UKismetSystemLibrary::QuitGame(this, GetWorld()->GetFirstPlayerController(), EQuitPreference::Quit, false);
 }
 
 void UMenu::MenuTearDown()

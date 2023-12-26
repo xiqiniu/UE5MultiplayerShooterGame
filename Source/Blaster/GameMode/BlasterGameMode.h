@@ -24,7 +24,8 @@ public:
 		class ABlasterPlayerController *VictimController, ABlasterPlayerController *AttackerController);
 
 	virtual void RequestRespawn(ACharacter *ElimmedCharacter, AController *ElimmedController);
-
+	void PlayerLeftGame(class ABlasterPlayerState *PlayerLeaving);
+	virtual float CalculateDamage(AController *Attacker, AController *Victim, float BaseDamage);
 	// 热身时长
 	UPROPERTY(EditDefaultsOnly)
 	float WarmupTime = 10.f;
@@ -39,11 +40,14 @@ public:
 
 	float LevelStartingTime = 0.f;
 
+	bool bTeamsMatch = false;
 protected:
 	virtual void BeginPlay() override;
 	virtual void OnMatchStateSet() override;
 private:
 	float CountdownTime = 0.f;
+
+	class UBlasterGameInstance *BlasterGameInstance;
 
 public:
 	FORCEINLINE float GetCountdownTime() const { return CountdownTime; }

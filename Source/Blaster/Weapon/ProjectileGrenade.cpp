@@ -50,6 +50,7 @@ void AProjectileGrenade::Destroyed()
 	Super::Destroyed();
 }
 
+#if WITH_EDITOR
 void AProjectileGrenade::PostEditChangeProperty(FPropertyChangedEvent &Event)
 {
 	Super::PostEditChangeProperty(Event);
@@ -64,3 +65,4 @@ void AProjectileGrenade::PostEditChangeProperty(FPropertyChangedEvent &Event)
 		}
 	}
 }
+#endif

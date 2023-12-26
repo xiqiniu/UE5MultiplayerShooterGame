@@ -36,6 +36,7 @@ protected:
 
 	UPROPERTY(VisibleAnywhere)
 	class URocketMovementComponent *RocketMovementComponent;
+
 private:
 
 };

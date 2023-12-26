@@ -26,6 +26,26 @@ UCombatComponent::UCombatComponent()
 	AimWalkSpeed = 450.f;
 }
 
+void UCombatComponent::BeginPlay()
+{
+	Super::BeginPlay();
+	if (Character)
+	{
+		Character->GetCharacterMovement()->MaxWalkSpeed = BaseWalkSpeed;
+
+		if (Character->GetFollowCamera())
+		{
+			DefaultFOV = Character->GetFollowCamera()->FieldOfView;
+			CurrentFOV = DefaultFOV;
+		}
+
+		if (Character->HasAuthority())
+		{
+			InitializeCarriedAmmo();
+		}
+	}
+}
+
 void UCombatComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty> &OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
@@ -35,9 +55,23 @@ void UCombatComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty> &Out
 	DOREPLIFETIME(UCombatComponent, bAiming);
 	DOREPLIFETIME(UCombatComponent, CombatState);
 	DOREPLIFETIME(UCombatComponent, Grenades);
+	DOREPLIFETIME(UCombatComponent, bHoldingTheFlag);
 	// 每个玩家只需要关注自己的携带弹药量
 	DOREPLIFETIME_CONDITION(UCombatComponent, CarriedAmmo, COND_OwnerOnly);
 
+}
+
+void UCombatComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction)
+{
+	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+	if (Character && Character->IsLocallyControlled())
+	{
+		FHitResult HitResult;
+		TraceUnderCrosshairs(HitResult);
+		HitTarget = HitResult.ImpactPoint;
+		SetHUDCrosshairs(DeltaTime);
+		InterpFOV(DeltaTime);
+	}
 }
 
 void UCombatComponent::PickupAmmo(EWeaponType WeaponType, int32 AmmoAmount)
@@ -54,53 +88,12 @@ void UCombatComponent::PickupAmmo(EWeaponType WeaponType, int32 AmmoAmount)
 	}
 }
 
-void UCombatComponent::BeginPlay()
-{
-	Super::BeginPlay();
-	if (Character)
-	{
-		Character->GetCharacterMovement()->MaxWalkSpeed = BaseWalkSpeed;
-
-		if (Character->GetFollowCamera())
-		{
-			DefaultFOV = Character->GetFollowCamera()->FieldOfView;
-			CurrentFOV = DefaultFOV;
-		}
-
-		if (Character->HasAuthority())
-		{
-			InitializeCarriedAmmo(); 
-		}
-	}
-}
-
-void UCombatComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction)
-{
-	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-	if (Character && Character->IsLocallyControlled())
-	{
-		FHitResult HitResult;
-		TraceUnderCrosshairs(HitResult);
-		HitTarget = HitResult.ImpactPoint;
-		SetHUDCrosshairs(DeltaTime);
-		InterpFOV(DeltaTime);
-	}
-}
-
 void UCombatComponent::FireButtonPressed(bool bPressed)
 {
 	bFireButtonPressed = bPressed;
 	if (bFireButtonPressed)
 	{
 		Fire();
-	}
-}
-
-void UCombatComponent::ShotgunShellReload()
-{
-	if (Character && Character->HasAuthority())
-	{
-		UpdateShotgunAmmoValues();
 	}
 }
 
@@ -223,6 +216,7 @@ void UCombatComponent::ShotgunLocalFire(const TArray<FVector_NetQuantize> &Trace
 	if (Shotgun == nullptr || Character == nullptr) return;
 	if (CombatState == ECombatState::ECS_Reloading || CombatState == ECombatState::ECS_Unoccupied)
 	{
+		bLocallyReloading = false;
 		Character->PlayFireMontage(bAiming);
 		Shotgun->FireShotgun(TraceHitTargets);
 		CombatState = ECombatState::ECS_Unoccupied;
@@ -256,9 +250,11 @@ bool UCombatComponent::CanFire()
 {
 	if (EquippedWeapon == nullptr) return false;
 	// 霰弹特例:可以在装弹中途攻击
-	if (!EquippedWeapon->IsEmpty() && bCanFire && CombatState == ECombatState::ECS_Reloading && 
+	if (!EquippedWeapon->IsEmpty() && bCanFire && CombatState == ECombatState::ECS_Reloading &&
 		EquippedWeapon->GetWeaponType() == EWeaponType::EWT_Shotgun)
+	{
 		return true;
+	}
 	// 本地正在装弹时不能开火
 	if (bLocallyReloading) return false;
 	//有无弹药 / 是否处于攻击间隔
@@ -297,17 +293,30 @@ void UCombatComponent::EquipWeapon(AWeapon *WeaponToEquip)
 {
 	if (Character == nullptr || WeaponToEquip == nullptr || CombatState != ECombatState::ECS_Unoccupied) return;
 	
-	if (EquippedWeapon != nullptr && SecondaryWeapon == nullptr)
+	if (WeaponToEquip->GetWeaponType() == EWeaponType::EWT_Flag)
 	{
-		EquipSecondaryWeapon(WeaponToEquip);
+		Character->Crouch();
+		bHoldingTheFlag = true;
+		// 需要确保先设置WeaponState, OnEquipped会禁用物理
+		WeaponToEquip->SetWeaponState(EWeaponState::EWS_Euipped);
+		AttachFlagToLeftHand(WeaponToEquip);
+		WeaponToEquip->SetOwner(Character);
+		TheFlag = WeaponToEquip;
 	}
 	else
 	{
-		EquipPrimaryWeapon(WeaponToEquip);
+		if (EquippedWeapon != nullptr && SecondaryWeapon == nullptr)
+		{
+			EquipSecondaryWeapon(WeaponToEquip);
+		}
+		else
+		{
+			EquipPrimaryWeapon(WeaponToEquip);
+		}
+		Character->GetCharacterMovement()->bOrientRotationToMovement = false;
+		Character->bUseControllerRotationYaw = true;
 	}
 	
-	Character->GetCharacterMovement()->bOrientRotationToMovement = false;
-	Character->bUseControllerRotationYaw = true;
 }
  
 void UCombatComponent::SwapWeapons()
@@ -418,6 +427,16 @@ void UCombatComponent::AttachActorToLeftHand(AActor *ActorToAttach)
 	}
 }
 
+void UCombatComponent::AttachFlagToLeftHand(AWeapon *Flag)
+{
+	if (Character == nullptr || Flag == nullptr || Character->GetMesh() == nullptr) return;
+	const USkeletalMeshSocket *HandSocket = Character->GetMesh()->GetSocketByName(FName("FlagSocket"));
+	if (HandSocket)
+	{
+		HandSocket->AttachActor(Flag, Character->GetMesh());
+	}
+}
+
 void UCombatComponent::AttachActorToBackpack(AActor *ActorToAttach)
 {
 	if (Character == nullptr || ActorToAttach == nullptr || Character->GetMesh() == nullptr) return;
@@ -462,6 +481,14 @@ void UCombatComponent::FinishReloading()
 	}
 }
 
+void UCombatComponent::ShotgunShellReload()
+{
+	if (Character && Character->HasAuthority())
+	{
+		UpdateShotgunAmmoValues();
+	}
+}
+
 void UCombatComponent::FinishSwap()
 {
 	bLocallySwapping = false;
@@ -474,6 +501,8 @@ void UCombatComponent::FinishSwap()
 
 void UCombatComponent::FinishSwapAttachWeapon()
 {
+	PlayEquippedWeaponSound(SecondaryWeapon);
+
 	AWeapon *TempWeapon = EquippedWeapon;
 	EquippedWeapon = SecondaryWeapon;
 	SecondaryWeapon = TempWeapon;
@@ -483,7 +512,6 @@ void UCombatComponent::FinishSwapAttachWeapon()
 
 	EquippedWeapon->SetHUDAmmo();
 	UpdateCarriedAmmo();
-	PlayEquippedWeaponSound(EquippedWeapon);
 	ReloadEmptyWeapon();
 
 	SecondaryWeapon->SetWeaponState(EWeaponState::EWS_EuippedSecondary);
@@ -554,6 +582,14 @@ void UCombatComponent::UpdateHUDGrenades()
 		}
 	}
 
+}
+
+void UCombatComponent::OnRep_HoldingTheFlag()
+{
+	if (bHoldingTheFlag && Character && Character->IsLocallyControlled())
+	{
+		Character->Crouch();
+	}
 }
 
 bool UCombatComponent::ShouldSwapWeapons()

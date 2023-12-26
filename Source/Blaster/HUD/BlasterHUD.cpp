@@ -5,9 +5,15 @@
 #include "GameFramework/PlayerController.h"
 #include "Announcement.h"
 #include "CharacterOverlay.h"
+#include "ElimAnnouncement.h"
+#include "TimerManager.h"
+#include "Components/HorizontalBox.h"
+#include "Components/CanvasPanelSlot.h"
+#include "Blueprint/WidgetLayoutLibrary.h"
 void ABlasterHUD::BeginPlay()
 {
 	Super::BeginPlay();
+
 }
 
 void ABlasterHUD::AddCharacterOverlay()
@@ -27,6 +33,50 @@ void ABlasterHUD::AddAnnouncement()
 	{
 		Announcement = CreateWidget<UAnnouncement>(PlayerController, AnnouncementClass);
 		Announcement->AddToViewport();
+	}
+}
+
+void ABlasterHUD::AddElimAnnouncement(FText Attacker, FText Victim)
+{
+	OwningPlayer = OwningPlayer == nullptr ? GetOwningPlayerController() : OwningPlayer;
+	if (OwningPlayer && ElimAnnouncementClass)
+	{
+		UElimAnnouncement *ElimAnnouncementWidget = 
+			CreateWidget<UElimAnnouncement>(OwningPlayer, ElimAnnouncementClass);
+		ElimAnnouncementWidget->SetElimAnnouncementText(Attacker, Victim);
+		ElimAnnouncementWidget->AddToViewport();
+
+		// 把之前的消息往上移动
+		for (UElimAnnouncement *Msg : ElimMessages)
+		{
+			if (Msg && Msg->AnnouncementBox)
+			{
+				UCanvasPanelSlot *CanvasSlot = UWidgetLayoutLibrary::SlotAsCanvasSlot(Msg->AnnouncementBox);
+				FVector2D Position = CanvasSlot->GetPosition();
+				FVector2D NewPosition(CanvasSlot->GetPosition().X, CanvasSlot->GetPosition().Y - CanvasSlot->GetSize().Y);
+				CanvasSlot->SetPosition(NewPosition);
+			}
+		}
+
+		ElimMessages.Add(ElimAnnouncementWidget);
+
+		FTimerHandle ElimMsgTimer;
+		FTimerDelegate ElimMsgDelegate;
+		ElimMsgDelegate.BindUFunction(this, FName("ElimAnnouncementTimerFinished"), ElimAnnouncementWidget);
+		GetWorldTimerManager().SetTimer(
+			ElimMsgTimer,
+			ElimMsgDelegate,
+			ElimAnnouncementTime,
+			false
+		);
+	}
+}
+
+void ABlasterHUD::ElimAnnouncementTimerFinished(UElimAnnouncement *MsgToRemove)
+{
+	if (MsgToRemove)
+	{
+		MsgToRemove->RemoveFromParent();
 	}
 }
 
@@ -89,3 +139,5 @@ void ABlasterHUD::DrawCrosshair(UTexture2D *Texture, FVector2D ViewportCenter, F
 		CrosshairsColor
 	);
 }
+
+
