@@ -7,7 +7,7 @@
 #include "BlasterGameState.generated.h"
 
 /**
- * 
+ * 游戏相关的变量: 当前领先的玩家及其分数, 队伍分数
  */
 UCLASS()
 class BLASTER_API ABlasterGameState : public AGameState
@@ -20,9 +20,8 @@ public:
 	UPROPERTY(Replicated)
 	TArray<ABlasterPlayerState *> TopScoringPlayers;
 
-	/*
-	* 团队
-	*/
+	float TopScore = 0.f;
+
 	void RedTeamScores();
 	void BlueTeamScores();
 	TArray<ABlasterPlayerState *> RedTeam;
@@ -39,7 +38,4 @@ public:
 
 	UFUNCTION()
 	void OnRep_BlueTeamScore();
-
-private:
-	float TopScore = 0.f;
 };

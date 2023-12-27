@@ -7,7 +7,7 @@
 #include "CharacterOverlay.generated.h"
 
 /**
- * 
+ * 显示玩家信息: 血量,护盾,得分, 死亡,团队分数,弹药,手雷,高延迟图标
  */
 UCLASS()
 class BLASTER_API UCharacterOverlay : public UUserWidget
@@ -30,6 +30,9 @@ public:
 	UTextBlock *ScoreAmount;
 
 	UPROPERTY(meta = (BindWidget))
+	UTextBlock *DefeatsAmount;
+
+	UPROPERTY(meta = (BindWidget))
 	UTextBlock *RedTeamScore;
 
 	UPROPERTY(meta = (BindWidget))
@@ -37,9 +40,6 @@ public:
 
 	UPROPERTY(meta = (BindWidget))
 	UTextBlock *ScoreSpacerText;
-
-	UPROPERTY(meta = (BindWidget))
-	UTextBlock *DefeatsAmount;
 
 	UPROPERTY(meta = (BindWidget))
 	UTextBlock *WeaponAmmoAmount;

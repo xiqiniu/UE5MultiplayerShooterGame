@@ -7,7 +7,7 @@
 #include "ShieldPickup.generated.h"
 
 /**
- * 
+ * 护盾道具
  */
 UCLASS()
 class BLASTER_API AShieldPickup : public APickup
@@ -30,8 +30,6 @@ private:
 	UPROPERTY(EditAnywhere)
 	float ShieldReplenishAmount = 50.f;
 
-	// 治疗要花的时间
 	UPROPERTY(EditAnywhere)
 	float ShieldReplenishTime = 5.f;
-
 };

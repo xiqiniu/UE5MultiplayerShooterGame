@@ -27,7 +27,4 @@ protected:
 private:
 	UPROPERTY(EditAnywhere)
 	class USphereComponent *ZoneSphere;
-
-public:	
-
 };

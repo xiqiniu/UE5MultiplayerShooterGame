@@ -25,6 +25,7 @@ public:
 
 	virtual void RequestRespawn(ACharacter *ElimmedCharacter, AController *ElimmedController);
 	void PlayerLeftGame(class ABlasterPlayerState *PlayerLeaving);
+	void PlayerLeftGameByController(class ABlasterPlayerController *PlayerLeaving);
 	virtual float CalculateDamage(AController *Attacker, AController *Victim, float BaseDamage);
 	// 热身时长
 	UPROPERTY(EditDefaultsOnly)
@@ -49,6 +50,7 @@ private:
 
 	class UBlasterGameInstance *BlasterGameInstance;
 
+	
 public:
 	FORCEINLINE float GetCountdownTime() const { return CountdownTime; }
 };

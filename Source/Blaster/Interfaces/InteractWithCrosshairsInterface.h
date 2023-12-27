@@ -14,7 +14,7 @@ class UInteractWithCrosshairsInterface : public UInterface
 };
 
 /**
- * 
+ * 与准星有交互的接口(用于玩家瞄准其他玩家时修改准星颜色)
  */
 class BLASTER_API IInteractWithCrosshairsInterface
 {

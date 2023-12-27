@@ -8,7 +8,7 @@
 
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FHighPingDelegate, bool, bPingTooHigh);
-
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnLeftGameByController);
 /**
  * 
  */
@@ -47,6 +47,12 @@ public:
 	FHighPingDelegate HighPingDelegate;
 
 	void BroadcastElim(APlayerState *Attacker, APlayerState *Victim);
+
+	UFUNCTION(Server, Reliable)
+	void ServerLeaveGame();
+
+	FOnLeftGameByController OnLeftGameByController;
+
 protected:
 	virtual void SetupInputComponent() override;
 	virtual void BeginPlay() override;
@@ -115,6 +121,9 @@ private:
 	UPROPERTY()
 	class ABlasterGameMode *BlasterGameMode;
 
+	UPROPERTY()
+	class ABlasterPlayerState *BlasterPlayerState;
+
 	/*
 	* 与游戏状态相关的时间
 	*/
@@ -180,6 +189,9 @@ private:
 	float HighPingThreshold = 50.f;
 
 	float PingAnimationRunningTime = 0.f;
+
+	UFUNCTION(Client, Reliable)
+	void ClientBroadcastLeftGameByController();
 
 	/*UFUNCTION()
 	void OnSkipWarmupChanged(bool bSkipWarmup);*/

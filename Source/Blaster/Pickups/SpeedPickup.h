@@ -7,7 +7,7 @@
 #include "SpeedPickup.generated.h"
 
 /**
- * 
+ * 速度buff道具
  */
 UCLASS()
 class BLASTER_API ASpeedPickup : public APickup

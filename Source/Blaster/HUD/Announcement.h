@@ -7,7 +7,7 @@
 #include "Announcement.generated.h"
 
 /**
- * 
+ * 游戏开始/结束时上方的提示
  */
 UCLASS()
 class BLASTER_API UAnnouncement : public UUserWidget
@@ -22,5 +22,4 @@ public:
 
 	UPROPERTY(meta = (BindWidget))
 	UTextBlock *InfoText;
-	
 };

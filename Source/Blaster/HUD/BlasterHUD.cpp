@@ -53,6 +53,7 @@ void ABlasterHUD::AddElimAnnouncement(FText Attacker, FText Victim)
 			{
 				UCanvasPanelSlot *CanvasSlot = UWidgetLayoutLibrary::SlotAsCanvasSlot(Msg->AnnouncementBox);
 				FVector2D Position = CanvasSlot->GetPosition();
+				// 向上移动一个水平框的高度
 				FVector2D NewPosition(CanvasSlot->GetPosition().X, CanvasSlot->GetPosition().Y - CanvasSlot->GetSize().Y);
 				CanvasSlot->SetPosition(NewPosition);
 			}
@@ -78,6 +79,7 @@ void ABlasterHUD::ElimAnnouncementTimerFinished(UElimAnnouncement *MsgToRemove)
 	{
 		MsgToRemove->RemoveFromParent();
 	}
+	ElimMessages.Remove(MsgToRemove);
 }
 
 void ABlasterHUD::DrawHUD()
@@ -118,6 +120,7 @@ void ABlasterHUD::DrawHUD()
 	}
 }
 
+// 根据传入的屏幕中心和偏移量画出准星
 void ABlasterHUD::DrawCrosshair(UTexture2D *Texture, FVector2D ViewportCenter, FVector2D Spread, FLinearColor CrosshairsColor)
 {
 	const float TextureWidth = Texture->GetSizeX();

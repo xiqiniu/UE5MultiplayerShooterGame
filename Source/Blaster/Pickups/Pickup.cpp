@@ -12,12 +12,16 @@
 APickup::APickup()
 {
 	PrimaryActorTick.bCanEverTick = true;
+
+	// 道具需要是可复制的
 	bReplicates = true;
 
 	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 	OverlapSphere = CreateDefaultSubobject<USphereComponent>(TEXT("OverlapSphere"));
 	OverlapSphere->SetupAttachment(RootComponent);
 	OverlapSphere->SetSphereRadius(150.f);
+
+	// 忽略其它碰撞,只允许Pawn的重叠
 	OverlapSphere->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	OverlapSphere->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
 	OverlapSphere->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Overlap);
@@ -27,8 +31,10 @@ APickup::APickup()
 
 	PickupMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("PickupMesh"));
 	PickupMesh->SetupAttachment(OverlapSphere);
+
 	// 放大
 	PickupMesh->SetRelativeScale3D(FVector(5.f, 5.f, 5.f));
+
 	// 设置轮廓颜色
 	PickupMesh->SetRenderCustomDepth(true);
 	PickupMesh->SetCustomDepthStencilValue(CUSTOM_DEPTH_PURPLE);
@@ -76,7 +82,6 @@ void APickup::Tick(float DeltaTime)
 
 void APickup::Destroyed()
 {
-	Super::Destroyed();
 	if (PickupSound)
 	{
 		UGameplayStatics::PlaySoundAtLocation(

@@ -7,7 +7,7 @@
 #include "ElimAnnouncement.generated.h"
 
 /**
- * 
+ * 击杀时显示的信息
  */
 UCLASS()
 class BLASTER_API UElimAnnouncement : public UUserWidget
@@ -21,5 +21,4 @@ public:
 
 	UPROPERTY(meta = (BindWidget))
 	class UTextBlock *AnnouncementText;
-
 };

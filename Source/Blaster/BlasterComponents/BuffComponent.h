@@ -11,46 +11,49 @@ UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class BLASTER_API UBuffComponent : public UActorComponent
 {
 	GENERATED_BODY()
-
+	// 方便角色对象能使用protected和private成员
 	friend class ABlasterCharacter;
 public:	
 	UBuffComponent();
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction) override;
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty> &OutLifetimeProps) const override;
+
 	void Heal(float HealAmount, float HealingTime);
 	void ReplenishShield(float ShieldAmount, float ReplenishTime);
 	void BuffSpeed(float BuffBaseSpeed, float BuffCrouchSpeed, float BuffTime);
 	void BuffJump(float BuffJumpVelocity, float BuffTime);
+	
+	// 记录原本的速度/跳跃,方便buff时间过后修改回来
 	void SetInitialSpeeds(float BaseSpeed, float CrouchSpeed);
 	void SetInitialJumpVelocity(float JumpVelocity);
 
 protected:
 	virtual void BeginPlay() override;
+
+	// 缓慢治疗/补充护盾
 	void HealRampUp(float DeltaTime);
 	void ShieldRampUp(float DeltaTime);
-
-public:	
-	
 
 private:
 	UPROPERTY()
 	class ABlasterCharacter *Character;
 
 	/*
-	* Heal buff
+	* 治疗buff
 	*/
 	bool bHealing = false;
 	float HealingRate = 0.f;
 	float AmountToHeal = 0.f;
 
 	/*
-	* Shield buff
+	* 护盾buff
 	*/
 	bool bReplenishingShield = false;
 	float ShieldReplenishRate = 0.f;
 	float ShieldReplenishAmount = 0.f;
 
 	/*
-	* Speed buff
+	* 加速buff
 	*/
 	FTimerHandle SpeedBuffTimer;
 	void ResetSpeeds();
@@ -61,8 +64,11 @@ private:
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastSpeedBuff(float BaseSpeed, float CrouchSpeed);
 
+	UPROPERTY(Replicated)
+	bool bIsBuffingSpeed;
+	
 	/*
-	* Jump buff
+	* 跳跃buff
 	*/
 	FTimerHandle JumpBuffTimer;
 	void ResetJump();

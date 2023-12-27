@@ -21,7 +21,7 @@ public:
 
 };
 /**
- * 
+ * 主HUD
  */
 UCLASS()
 class BLASTER_API ABlasterHUD : public AHUD
@@ -45,7 +45,9 @@ public:
 	class UAnnouncement *Announcement;
 
 	void AddAnnouncement();
+
 	void AddElimAnnouncement(FText Attacker, FText Victim);
+
 protected:
 	virtual void BeginPlay() override;
 
@@ -69,6 +71,7 @@ private:
 	UFUNCTION()
 	void ElimAnnouncementTimerFinished(UElimAnnouncement *MsgToRemove);
 
+	// 击杀信息,每个信息会持续一段时间,所以要用TArray存下来
 	UPROPERTY()
 	TArray<UElimAnnouncement *>ElimMessages;
 

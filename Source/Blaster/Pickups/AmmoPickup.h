@@ -6,8 +6,9 @@
 #include "Pickup.h"
 #include "Blaster/Weapon/WeaponTypes.h"
 #include "AmmoPickup.generated.h"
+
 /**
- * 
+ * µ¯Ò©µÀ¾ß
  */
 UCLASS()
 class BLASTER_API AAmmoPickup : public APickup

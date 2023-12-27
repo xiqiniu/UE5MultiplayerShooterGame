@@ -17,15 +17,15 @@ class BLASTER_API UReturnToMainMenu : public UUserWidget
 public:
 	void MenuSetup();
 	void MenuTearDown();
-
+	UFUNCTION()
+	void OnPlayerLeftGame();
 protected:
 	virtual bool Initialize() override;
 
 	UFUNCTION()
 	void OnDestroySession(bool bWasSuccessful);
 
-	UFUNCTION()
-	void OnPlayerLeftGame();
+
 
 private:
 	UPROPERTY(meta = (BindWidget))

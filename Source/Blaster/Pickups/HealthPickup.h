@@ -7,15 +7,12 @@
 #include "HealthPickup.generated.h"
 
 /**
- * 
+ * 治疗道具
  */
 UCLASS()
 class BLASTER_API AHealthPickup : public APickup
 {
 	GENERATED_BODY()
-public:
-	AHealthPickup();
-
 protected:
 	virtual void OnSphereOverlap(
 		UPrimitiveComponent *OverlappedComponent,
@@ -33,6 +30,4 @@ private:
 	// 治疗要花的时间
 	UPROPERTY(EditAnywhere)
 	float HealingTime = 5.f;
-
-
 };

@@ -6,6 +6,9 @@
 #include "GameFramework/Actor.h"
 #include "Pickup.generated.h"
 
+/*
+* 道具
+*/
 UCLASS()
 class BLASTER_API APickup : public AActor
 {
@@ -17,11 +20,12 @@ public:
 	virtual void Destroyed() override;
 
 protected:
-
 	UPROPERTY(EditAnywhere)
 	float BaseTurnRate = 45.f;
 
 	virtual void BeginPlay() override;
+
+	// 设置为虚函数,方便不同道具实现不同效果
 	UFUNCTION()
 	virtual void OnSphereOverlap(
 		UPrimitiveComponent *OverlappedComponent, 
@@ -31,7 +35,6 @@ protected:
 		bool bFromSweep, 
 		const FHitResult &SweepResult
 	);
-
 
 private:
 	UPROPERTY(EditAnywhere)
@@ -43,6 +46,7 @@ private:
 	UPROPERTY(EditAnywhere)
 	UStaticMeshComponent *PickupMesh;
 
+	// 拾取时播放的特效
 	UPROPERTY(VisibleAnywhere)
 	class UNiagaraComponent *PickupEffectComponent;
 
@@ -53,8 +57,4 @@ private:
 
 	float BindOverlapTime = 0.25f;
 	void BindOverlapTimerFinished();
-public:	
-	
-	
-
 };

@@ -18,6 +18,8 @@
 #include "Blaster/HUD/ReturnToMainMenu.h"
 #include "Blaster/BlasterTypes/Announcement.h"
 #include "Blaster/GameInstance/BlasterGameInstance.h"
+#include "Blaster/Blaster.h"
+
 void ABlasterPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
@@ -113,12 +115,13 @@ void ABlasterPlayerController::CheckPing(float DeltaTime)
 	HighPingRunningTime += DeltaTime;
 	if (HighPingRunningTime > CheckingPingFrequency)
 	{
-		PlayerState = PlayerState == nullptr ? GetPlayerState<APlayerState>() : PlayerState;
-		if (PlayerState)
+		BlasterPlayerState = BlasterPlayerState == nullptr ? 
+			Cast<ABlasterPlayerState>(GetPlayerState<APlayerState>()) : BlasterPlayerState;
+		if (BlasterPlayerState)
 		{
 			//UE_LOG(LogTemp, Warning, TEXT("PlayerState->GetPing() * 4 : %d"), PlayerState->GetPing() * 4);
 			// GetPing()得到的是压缩过的,是原本Ping的四分之一
-			if (PlayerState->GetPingInMilliseconds() * 4 > HighPingThreshold)
+			if (BlasterPlayerState->GetPingInMilliseconds() * 4 > HighPingThreshold)
 			{
 				HighPingWarning();
 				PingAnimationRunningTime = 0.f;
@@ -163,6 +166,34 @@ void ABlasterPlayerController::ShowReturnToMainMenu()
 	}
 }
 
+void ABlasterPlayerController::ServerLeaveGame_Implementation()
+{
+	BlasterGameMode = BlasterGameMode == nullptr ? GetWorld()->GetAuthGameMode<ABlasterGameMode>() : BlasterGameMode;
+	if (BlasterGameMode)
+	{
+		BlasterGameMode->PlayerLeftGameByController(this);
+	}
+	LogOnScreen(this, FString::Printf(TEXT("OnLeftGameByController In Server IsBound: %s"), OnLeftGameByController.IsBound() ? TEXT("True") : TEXT("False")));
+	if (IsLocalPlayerController())
+	{
+		LogOnScreen(this, "Broadcast in server");
+		OnLeftGameByController.Broadcast();
+	}
+	else
+	{
+		LogOnScreen(this, "Call ClientBroadcast");
+		ClientBroadcastLeftGameByController();
+	}
+}
+
+void ABlasterPlayerController::ClientBroadcastLeftGameByController_Implementation()
+{
+	LogOnScreen(this, FString::Printf(TEXT("OnLeftGameByController In Client IsBound: %s"), OnLeftGameByController.IsBound() ? TEXT("True") : TEXT("False")));
+
+	LogOnScreen(this, "Broadcast in client");
+	OnLeftGameByController.Broadcast();
+
+}
 void ABlasterPlayerController::ServerCheckMatchState_Implementation()
 {
 	ABlasterGameMode *GameMode = Cast<ABlasterGameMode>(UGameplayStatics::GetGameMode(this));
@@ -461,11 +492,12 @@ void ABlasterPlayerController::SetHUDTime()
 	// 服务器不能直接只减去GetServerTime,因为在lobby里等待的时间也会加到GetTimeSeconds里面,所以要获取准确的CountdownTime
 	if (HasAuthority())
 	{
-		if (BlasterGameMode == nullptr)
+		BlasterGameMode = BlasterGameMode == nullptr ? Cast<ABlasterGameMode>(UGameplayStatics::GetGameMode(this)) : BlasterGameMode;
+		if (BlasterGameMode)
 		{
-			BlasterGameMode = Cast<ABlasterGameMode>(UGameplayStatics::GetGameMode(this));
 			LevelStartingTime = BlasterGameMode->LevelStartingTime;
 		}
+		
 		BlasterGameMode = BlasterGameMode == nullptr ? Cast<ABlasterGameMode>(UGameplayStatics::GetGameMode(this)) : BlasterGameMode;
 		if (BlasterGameMode)
 		{
@@ -607,7 +639,9 @@ void ABlasterPlayerController::HandleCooldown()
 			BlasterHUD->Announcement->AnnouncementText->SetText(AnnouncementText);
 
 			ABlasterGameState *BlasterGameState = Cast<ABlasterGameState>(UGameplayStatics::GetGameState(this));
-			ABlasterPlayerState *BlasterPlayerState = GetPlayerState<ABlasterPlayerState>();
+			//ABlasterPlayerState *BlasterPlayerState = GetPlayerState<ABlasterPlayerState>();
+			BlasterPlayerState = BlasterPlayerState == nullptr ?
+				Cast<ABlasterPlayerState>(GetPlayerState<APlayerState>()) : BlasterPlayerState;
 			if (BlasterGameState)
 			{
 				TArray<ABlasterPlayerState*> TopPlayers = BlasterGameState->TopScoringPlayers;
@@ -628,7 +662,8 @@ void ABlasterPlayerController::HandleCooldown()
 FText ABlasterPlayerController::GetInfoText(const TArray<class ABlasterPlayerState *> &Players)
 {
 	FText InfoText;
-	ABlasterPlayerState *BlasterPlayerState = GetPlayerState<ABlasterPlayerState>();
+	BlasterPlayerState = BlasterPlayerState == nullptr ?
+		Cast<ABlasterPlayerState>(GetPlayerState<APlayerState>()) : BlasterPlayerState;
 	if (BlasterPlayerState == nullptr) return FText();
 
 	if (Players.Num() == 0)

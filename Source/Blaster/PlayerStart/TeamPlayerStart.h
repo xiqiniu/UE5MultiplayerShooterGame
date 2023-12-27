@@ -8,7 +8,7 @@
 #include "TeamPlayerStart.generated.h"
 
 /**
- * 
+ * 用于团队模式的出生点
  */
 UCLASS()
 class BLASTER_API ATeamPlayerStart : public APlayerStart

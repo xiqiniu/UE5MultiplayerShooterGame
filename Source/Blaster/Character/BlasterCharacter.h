@@ -76,8 +76,26 @@ protected:
 	void Turn(float Value);
 	void LookUp(float Value);
 	void RunButtonPressed();
+
+	UFUNCTION(Server, Reliable)
+	void ServerRunButtonPressed();
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastRunButtonPressed();
+
 	void RunButtonReleased();
+
+	UFUNCTION(Server, Reliable)
+	void ServerRunButtonReleased();
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastRunButtonReleased();
+
 	void EquipButtonPressed();
+
+	UFUNCTION(Server, Reliable)
+	void ServerEquipButtonPressed();
+
 	void CrouchButtonPressed();
 	void ReloadButtonPressed();
 	void AimButtonPressed();
@@ -169,7 +187,7 @@ private:
 	UPROPERTY(EditAnywhere)
 	float RunSpeed = 800.f;
 	
-	float MaxWalkSpeed = 600.f;
+	float InitialMaxWalkSpeed = 600.f;
 
 	UPROPERTY(VisibleAnywhere, Category = Camera)
 	class USpringArmComponent *CameraBoom;
@@ -197,9 +215,6 @@ private:
 
 	UPROPERTY(VisibleAnywhere)
 	class UBuffComponent *Buff;
-
-	UFUNCTION(Server, Reliable)
-	void ServerEquipButtonPressed();
 
 	void HideCameraIfCharacterClose();
 
@@ -235,6 +250,7 @@ private:
 	UAnimMontage *SwapMontage;
 
 	bool bRotateRootBone;
+
 	// 设置simulated的角色播放旋转动画的阈值
 	UPROPERTY(EditAnywhere)
 	float TurnThreshold = 0.5f;
@@ -305,7 +321,7 @@ private:
 	UMaterialInstance *DissolveMaterialInstance;
 
 	/*
-	* 团队颜色
+	* 团队颜色和死亡溶解效果
 	*/
 	UPROPERTY(EditAnywhere, Category = Elim)
 	UMaterialInstance *RedDissolveMatInst;	

@@ -2,31 +2,31 @@
 
 
 #include "BlasterCharacter.h"
-#include "GameFramework/SpringArmComponent.h"
-#include "Camera/CameraComponent.h"
-#include "Components/WidgetComponent.h"
-#include "Net/UnrealNetwork.h"
-#include "Blaster/Weapon/Weapon.h"
-#include "Blaster/BlasterComponents/CombatComponent.h"
-#include "Blaster/BlasterComponents/LagCompensationComponent.h"
-#include "Blaster/BlasterComponents/BuffComponent.h"
-#include "GameFramework/CharacterMovementComponent.h"
-#include "Components/CapsuleComponent.h"
-#include "Kismet/KismetMathLibrary.h"
-#include "BlasterAnimInstance.h"
 #include "Blaster/Blaster.h"
 #include "Blaster/PlayerController/BlasterPlayerController.h"
+#include "Blaster/GameState/BlasterGameState.h"
+#include "Blaster/PlayerState/BlasterPlayerState.h"
 #include "Blaster/GameMode/BlasterGameMode.h"
+#include "GameFramework/SpringArmComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
+#include "Camera/CameraComponent.h"
+#include "Components/WidgetComponent.h"
+#include "Components/CapsuleComponent.h"
+#include "Components/BoxComponent.h"
 #include "TimerManager.h"
 #include "Kismet/GameplayStatics.h"
 #include "Sound/SoundCue.h"
 #include "Particles/ParticleSystemComponent.h"
-#include "Blaster/PlayerState/BlasterPlayerState.h"
-#include "Blaster/Weapon/WeaponTypes.h"
-#include "Components/BoxComponent.h"
 #include "NiagaraComponent.h"
 #include "NiagaraFunctionLibrary.h"
-#include "Blaster/GameState/BlasterGameState.h"
+#include "Net/UnrealNetwork.h"
+#include "Kismet/KismetMathLibrary.h"
+#include "Blaster/Weapon/Weapon.h"
+#include "Blaster/Weapon/WeaponTypes.h"
+#include "Blaster/BlasterComponents/CombatComponent.h"
+#include "Blaster/BlasterComponents/LagCompensationComponent.h"
+#include "Blaster/BlasterComponents/BuffComponent.h"
+#include "BlasterAnimInstance.h"
 #include "Blaster/BlasterTypes/Team.h"
 #include "Blaster/PlayerStart/TeamPlayerStart.h"
 
@@ -251,7 +251,7 @@ void ABlasterCharacter::SetTeamColor(ETeam Team)
 void ABlasterCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-
+	InitialMaxWalkSpeed = GetCharacterMovement()->MaxWalkSpeed;
 	if (HasAuthority())
 	{
 		OnTakeAnyDamage.AddDynamic(this, &ABlasterCharacter::ReceiveDamage);
@@ -512,17 +512,43 @@ void ABlasterCharacter::LookUp(float Value)
 
 void ABlasterCharacter::RunButtonPressed()
 {
+	ServerRunButtonPressed();
+}
+
+void ABlasterCharacter::ServerRunButtonPressed_Implementation()
+{
+	MulticastRunButtonPressed();
+}
+
+void ABlasterCharacter::MulticastRunButtonPressed_Implementation()
+{
 	if (GetCharacterMovement())
 	{
-		GetCharacterMovement()->MaxWalkSpeed = RunSpeed;
+		if (Buff && !Buff->bIsBuffingSpeed)
+		{
+			GetCharacterMovement()->MaxWalkSpeed = RunSpeed;
+		}
 	}
 }
 
 void ABlasterCharacter::RunButtonReleased()
 {
+	ServerRunButtonReleased();
+}
+
+void ABlasterCharacter::ServerRunButtonReleased_Implementation()
+{
+	MulticastRunButtonReleased();
+}
+
+void ABlasterCharacter::MulticastRunButtonReleased_Implementation()
+{
 	if (GetCharacterMovement())
 	{
-		GetCharacterMovement()->MaxWalkSpeed = MaxWalkSpeed;
+		if (Buff && !Buff->bIsBuffingSpeed)
+		{
+			GetCharacterMovement()->MaxWalkSpeed = InitialMaxWalkSpeed;
+		}
 	}
 }
 

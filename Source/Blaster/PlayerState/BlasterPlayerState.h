@@ -8,7 +8,7 @@
 #include "BlasterPlayerState.generated.h"
 
 /**
- * 
+ * 与玩家相关的数据: 分数,死亡次数,队伍
  */
 UCLASS()
 class BLASTER_API ABlasterPlayerState : public APlayerState
@@ -20,6 +20,7 @@ public:
 	void ADDToScore(float ScoreAmount);
 	void ADDToDefeats(int32 DefeatsAmount);
 
+	// APlayerState 已经有成员变量Score且标记为可复制的,直接重写OnRep_Score()
 	virtual void OnRep_Score() override;
 
 	UFUNCTION()
@@ -43,9 +44,8 @@ private:
 
 	UFUNCTION()
 	void OnRep_Team();
+
 public:
 	FORCEINLINE ETeam GetTeam() const { return Team; }
 	void SetTeam(ETeam TeamToSet);
-
-
 };

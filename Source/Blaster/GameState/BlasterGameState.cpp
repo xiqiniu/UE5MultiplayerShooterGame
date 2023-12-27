@@ -40,6 +40,7 @@ void ABlasterGameState::RedTeamScores()
 {
 	++RedTeamScore;
 
+	// 服务器上更新红队得分
 	ABlasterPlayerController *BlasterPlayerController = Cast<ABlasterPlayerController>(GetWorld()->GetFirstPlayerController());
 	if (BlasterPlayerController)
 	{
@@ -60,6 +61,7 @@ void ABlasterGameState::BlueTeamScores()
 
 void ABlasterGameState::OnRep_RedTeamScore()
 {
+	// 客户端上更新红队得分
 	ABlasterPlayerController *BlasterPlayerController = Cast<ABlasterPlayerController>(GetWorld()->GetFirstPlayerController());
 	if (BlasterPlayerController)
 	{

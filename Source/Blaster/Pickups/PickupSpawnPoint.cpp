@@ -15,17 +15,16 @@ void APickupSpawnPoint::BeginPlay()
 {
 	Super::BeginPlay();
 	
+	// 游戏开始时就生成道具
 	if (HasAuthority())
 	{
 		SpawnPickup();
 	}
-	//StartPickupTimer((AActor*)nullptr);
 }
 
 void APickupSpawnPoint::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
 }
 
 void APickupSpawnPoint::SpawnPickup()
@@ -40,6 +39,7 @@ void APickupSpawnPoint::SpawnPickup()
 			GetActorTransform()
 		);
 
+		// 生成的道具被拾取后开启定时器生成下一个道具
 		if (HasAuthority() && SpawnedPickup)
 		{
 			SpawnedPickup->OnDestroyed.AddDynamic(this, &APickupSpawnPoint::StartPickupTimer);

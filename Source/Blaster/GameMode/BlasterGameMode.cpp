@@ -11,6 +11,8 @@
 #include "Blaster/PlayerState/BlasterPlayerState.h"
 #include "Blaster/GameState/BlasterGameState.h"
 #include "Blaster/GameInstance/BlasterGameInstance.h"
+#include "Blaster/Blaster.h"
+
 namespace MatchState
 {
     const FName Cooldown = FName("Cooldown");
@@ -237,6 +239,18 @@ void ABlasterGameMode::PlayerLeftGame(ABlasterPlayerState *PlayerLeaving)
     if (CharacterLeaving)
     {
         CharacterLeaving->Elim(true);
+    }
+}
+
+void ABlasterGameMode::PlayerLeftGameByController(ABlasterPlayerController *PlayerLeaving)
+{
+    LogOnScreen(this, "PlayerLeftGameByController Get Called");
+    if (PlayerLeaving == nullptr) nullptr;
+    ABlasterGameState *BlasterGameState = GetGameState<ABlasterGameState>();
+    ABlasterPlayerState *PlayerLeavingState = Cast<ABlasterPlayerState>(PlayerLeaving->PlayerState);
+    if (BlasterGameState && BlasterGameState->TopScoringPlayers.Contains(PlayerLeavingState))
+    {
+        BlasterGameState->TopScoringPlayers.Remove(PlayerLeavingState);
     }
 }
 

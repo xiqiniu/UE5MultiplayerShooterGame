@@ -7,7 +7,7 @@
 #include "OverHeadWidget.generated.h"
 
 /**
- * 
+ * 用于测试时显示每个玩家的NetRole的HUD
  */
 UCLASS()
 class BLASTER_API UOverHeadWidget : public UUserWidget
@@ -22,6 +22,7 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void ShowPlayerNetRole(APawn *InPawn);
+
 protected:
 	virtual void NativeDestruct() override;
 };

@@ -25,6 +25,7 @@ void AFlagZone::OnSphereOverlap(UPrimitiveComponent *OverlappedComponent, AActor
 	AFlag *OverlappingFlag = Cast<AFlag>(OtherActor);
 	if (OverlappingFlag)
 	{
+		// 拿到不同队伍的旗子才能得分
 		if (OverlappingFlag->GetTeam() != Team)
 		{
 			ACaptureTheFlagGameMode *CaptureTheFlagGameMode = 
