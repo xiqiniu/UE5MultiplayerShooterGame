@@ -6,6 +6,9 @@
 #include "GameFramework/Actor.h"
 #include "Casing.generated.h"
 
+/*
+* µ¯¿Ç
+*/
 UCLASS()
 class BLASTER_API ACasing : public AActor
 {
@@ -35,7 +38,4 @@ private:
 
 	UPROPERTY(EditAnywhere)
 	float ShellExpireTime;
-public:	
-
-
 };

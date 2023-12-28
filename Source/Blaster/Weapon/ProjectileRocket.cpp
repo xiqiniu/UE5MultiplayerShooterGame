@@ -2,14 +2,14 @@
 
 
 #include "ProjectileRocket.h"
+#include "TimerManager.h"
 #include "Kismet/GameplayStatics.h"
 #include "NiagaraFunctionLibrary.h"
-#include "TimerManager.h"
-#include "Components/BoxComponent.h"
-#include "Sound/SoundCue.h"
 #include "NiagaraComponent.h"
-#include "Components/AudioComponent.h"
 #include "RocketMovementComponent.h"
+#include "Components/BoxComponent.h"
+#include "Components/AudioComponent.h"
+#include "Sound/SoundCue.h"
 AProjectileRocket::AProjectileRocket()
 {
 	ProjectileMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Rocket Mesh"));

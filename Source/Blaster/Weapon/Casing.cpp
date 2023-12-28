@@ -21,7 +21,6 @@ ACasing::ACasing()
 	ShellEjectionImpulse = 10.f;
 
 	ShellExpireTime = 5.f;
-
 }
 
 void ACasing::BeginPlay()
@@ -29,7 +28,6 @@ void ACasing::BeginPlay()
 	Super::BeginPlay();
 	CasingMesh->OnComponentHit.AddDynamic(this, &ACasing::OnHit);
 	CasingMesh->AddImpulse(GetActorForwardVector() * ShellEjectionImpulse);
-	
 }
 
 void ACasing::OnHit(UPrimitiveComponent *HitComp, AActor *OtherActor, UPrimitiveComponent *OtherComp, FVector NormalImpulse, const FHitResult &Hit)

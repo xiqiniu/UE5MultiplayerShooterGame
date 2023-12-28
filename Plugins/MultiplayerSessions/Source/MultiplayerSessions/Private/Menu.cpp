@@ -115,6 +115,14 @@ void UMenu::OnFindSessions(const TArray<FOnlineSessionSearchResult> &SessionResu
 			MultiplayerSessionsSubsystem->JoinSession(Result);
 			return;
 		}
+		else
+		{
+			if (GEngine)
+			{
+				GEngine->AddOnScreenDebugMessage(-1, 15.f, FColor::Red, FString(TEXT("No Matching Type Room")));
+			}
+			JoinButton->SetIsEnabled(true);
+		}
 	}
 	if (!bWasSuccessful || SessionResults.Num() == 0)
 	{

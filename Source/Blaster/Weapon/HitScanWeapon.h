@@ -26,12 +26,11 @@ protected:
 	UPROPERTY(EditAnywhere)
 	USoundCue *HitSound;
 
-
-
 private:
 	UPROPERTY(EditAnywhere)
 	UParticleSystem *BeamParticles;
 
+	// SMG没有开火动画,所以要自己生成枪口的火花
 	UPROPERTY(EditAnywhere)
 	UParticleSystem *MuzzleFlash;
 

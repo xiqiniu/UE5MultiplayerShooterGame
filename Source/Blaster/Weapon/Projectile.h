@@ -14,9 +14,7 @@ class BLASTER_API AProjectile : public AActor
 public:	
 	AProjectile();
 
-	/*
-	* 用于服务器回退
-	*/
+	// 是否开启SSR
 	bool bUseServerSideRewind = false;
 
 	FVector_NetQuantize TraceStart;
@@ -33,6 +31,7 @@ public:
 	// 对手雷和火箭不起作用
 	UPROPERTY(EditAnywhere)
 	float HeadShotDamage = 40.f;
+
 protected:
 	virtual void BeginPlay() override;
 	void SpawnTrailSystem();
@@ -40,9 +39,6 @@ protected:
 	void DestroyTimerFinished();
 	void ExplodeDamage();
 
-	// DECLARE_DYNAMIC_MULTICAST_SPARSE_DELEGATE_FiveParams( FComponentHitSignature, UPrimitiveComponent, 
-	// OnComponentHit, UPrimitiveComponent*, HitComponent, AActor*, OtherActor, UPrimitiveComponent*, OtherComp, 
-	// FVector, NormalImpulse, const FHitResult&, Hit );
 	UFUNCTION()
 	virtual void OnHit(UPrimitiveComponent *HitComp, AActor *OtherActor, UPrimitiveComponent *OtherComp, FVector NormalImpulse, const FHitResult &Hit);
 
@@ -60,6 +56,7 @@ protected:
 	UPROPERTY(VisibleAnywhere)
 	class UProjectileMovementComponent *ProjectileMovementComponent;
 
+	// 子弹尾迹(用于火箭和榴弹)
 	UPROPERTY(EditAnywhere)
 	class UNiagaraSystem *TrailSystem;
 
@@ -68,6 +65,12 @@ protected:
 
 	UPROPERTY(VisibleAnywhere)
 	UStaticMeshComponent *ProjectileMesh;
+	
+	// 让尾迹在一段时间后消失
+	FTimerHandle DestroyTimer;
+
+	UPROPERTY(EditAnywhere)
+	float DestroyTime = 3.f;
 
 	// 爆炸类子弹的爆炸半径
 	UPROPERTY(EditAnywhere)
@@ -77,22 +80,14 @@ protected:
 	float DamageOuterRadius = 500.f;
 
 private:
+	// 用于发射子弹的武器显示子弹轨迹
 	UPROPERTY(EditAnywhere)
 	UParticleSystem *Tracer;
 
 	UPROPERTY()
 	class UParticleSystemComponent *TracerComponent;
 
-	/*
-	* 让尾迹在一段时间后消失
-	*/
-	FTimerHandle DestroyTimer;
-
-	UPROPERTY(EditAnywhere)
-	float DestroyTime = 3.f;
-	
 public:	
 	virtual void Tick(float DeltaTime) override;
 	virtual void Destroyed() override;
-
 };

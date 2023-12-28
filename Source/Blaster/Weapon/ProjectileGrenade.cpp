@@ -28,7 +28,6 @@ void AProjectileGrenade::BeginPlay()
 	StartDestroyTimer();
 	SpawnTrailSystem();
 	ProjectileMovementComponent->OnProjectileBounce.AddDynamic(this, &AProjectileGrenade::OnBounce);
-
 }
 
 void AProjectileGrenade::OnBounce(const FHitResult &ImpactResult, const FVector &ImpactVelocity)

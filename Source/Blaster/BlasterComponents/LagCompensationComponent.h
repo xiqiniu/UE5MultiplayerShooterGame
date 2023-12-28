@@ -6,6 +6,7 @@
 #include "Components/ActorComponent.h"
 #include "LagCompensationComponent.generated.h"
 
+// 用于SSR的碰撞盒的信息
 USTRUCT(BlueprintType)
 struct FBoxInformation
 {
@@ -21,6 +22,7 @@ struct FBoxInformation
 	FVector BoxExtent;
 };
 
+// 启用SSR时,每一帧要存储的信息
 USTRUCT(BlueprintType)
 struct FFramePackage
 {
@@ -34,9 +36,9 @@ struct FFramePackage
 
 	UPROPERTY()
 	ABlasterCharacter *Character;
-
 };
 
+// 普通武器的SSR结果,只需返回是否打中和是否爆头
 USTRUCT(BlueprintType)
 struct FServerSideRewindResult
 {
@@ -49,6 +51,7 @@ struct FServerSideRewindResult
 	bool bHeadShot;
 };
 
+// 霰弹的SSR结果,需要返回两个Map,键是打中的玩家,值是打中了几次
 USTRUCT(BlueprintType)
 struct FShotgunServerSideRewindResult
 {
@@ -59,7 +62,6 @@ struct FShotgunServerSideRewindResult
 
 	UPROPERTY()
 	TMap<ABlasterCharacter *, uint32> BodyShots;
-
 };
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
@@ -73,8 +75,6 @@ public:
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction) override;
 	void ShowFramePackage(const FFramePackage &Package, const FColor Color);
 
-
-
 	// 扫描类
 	FServerSideRewindResult ServerSideRewind(
 		class ABlasterCharacter *HitCharacter, 
@@ -82,6 +82,7 @@ public:
 		const FVector_NetQuantize HitLocation, 
 		float HitTime
 	);
+
 	// 弹药类
 	FServerSideRewindResult ProjectileServerSideRewind(
 		ABlasterCharacter *HitCharacter,
@@ -121,18 +122,32 @@ public:
 		const TArray<FVector_NetQuantize> &HitLocations,
 		float HitTime
 	);
+
 protected:
 	virtual void BeginPlay() override;
+	// 记录帧信息
 	void SaveFramePackage(FFramePackage &Package);
-	FFramePackage InterpBetweenFrames(const FFramePackage &OlderFrame, const FFramePackage &YoungerFrame,const float HitTime);
-	void CacheBoxPositions(ABlasterCharacter *HitCharacter, FFramePackage &OutFramePackage);
-	void MoveBoxes(ABlasterCharacter *HitCharacter, const FFramePackage& Package);
-	void ResetHitBoxes(ABlasterCharacter *HitCharacter, const FFramePackage &Package);
-	void EnableCharacterMeshCollision(ABlasterCharacter *HitCharacter, ECollisionEnabled::Type CollisionEnabled);
 	void SaveFramePackage();
+
+	// 存储当前角色位置的碰撞盒,方便做完SSR检测后放回去
+	void CacheBoxPositions(ABlasterCharacter *HitCharacter, FFramePackage &OutFramePackage);
+
+	// 根据帧信息移动碰撞盒
+	void MoveBoxes(ABlasterCharacter *HitCharacter, const FFramePackage& Package);
+
+	// 还原碰撞盒的位置
+	void ResetHitBoxes(ABlasterCharacter *HitCharacter, const FFramePackage &Package);
+
+	// 做SSR检测时需要禁用角色的Mesh,我们只关注是否打中了那一帧的碰撞盒
+	void EnableCharacterMeshCollision(ABlasterCharacter *HitCharacter, ECollisionEnabled::Type CollisionEnabled);
+
+	// 找到距离HitTime最近的那一帧(利用了插值)
 	FFramePackage GetFrameToCheck(ABlasterCharacter *HitCharacter, float HitTime);
 
-	// 扫描类
+	// 用离HitTime最接近的两帧的信息进行插值
+	FFramePackage InterpBetweenFrames(const FFramePackage &OlderFrame, const FFramePackage &YoungerFrame, const float HitTime);
+
+	// 扫描类SSR检测是否击中
 	FServerSideRewindResult ConfirmHit(
 		const FFramePackage &Package,
 		ABlasterCharacter *HitCharacter,
@@ -140,7 +155,7 @@ protected:
 		const FVector_NetQuantize &HitLocation
 	);
 
-	// 弹药类
+	// 弹药类SSR检测是否击中
 	FServerSideRewindResult ProjectileConfirmHit(
 		const FFramePackage &Package,
 		ABlasterCharacter *HitCharacter,
@@ -149,12 +164,13 @@ protected:
 		float HitTime
 	);
 
-	// 霰弹
+	// 霰弹SSR检测是否击中
 	FShotgunServerSideRewindResult ShotgunConfirmHit(
 		const TArray<FFramePackage> &FramePackages,
 		const FVector_NetQuantize &TraceStart,
 		const TArray<FVector_NetQuantize> &HitLocations
 		);
+
 private:
 	UPROPERTY()
 	ABlasterCharacter *Character;
@@ -166,7 +182,4 @@ private:
 
 	UPROPERTY(EditAnywhere)
 	float MaxRecordTime = 4.f;
-public:	
-
-		
 };

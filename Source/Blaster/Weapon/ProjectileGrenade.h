@@ -26,7 +26,6 @@ protected:
 
 	UFUNCTION()
 	void OnBounce(const FHitResult &ImpactResult, const FVector &ImpactVelocity);
-	
 
 private:
 	UPROPERTY(EditAnywhere)

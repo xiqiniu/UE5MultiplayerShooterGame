@@ -4,11 +4,11 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
-#include "Blaster/BlasterTypes/TurningInPlace.h"
-#include "Blaster/Interfaces/InteractWithCrosshairsInterface.h"
 #include "Components/TimelineComponent.h"
-#include "Blaster/BlasterTypes/CombatState.h"
+#include "Blaster/Interfaces/InteractWithCrosshairsInterface.h"
 #include "Blaster/BlasterTypes/Team.h"
+#include "Blaster/BlasterTypes/CombatState.h"
+#include "Blaster/BlasterTypes/TurningInPlace.h"
 #include "BlasterCharacter.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnLeftGame);
@@ -29,16 +29,31 @@ public:
 	* 播放蒙太奇
 	*/
 	void PlayFireMontage(bool bAiming);
-	void PlayReloadMontage();
 	void PlayElimMontage();
 	void PlayThrowGrenadeMontage();
 	void PlaySwapMontage();
+
+	void PlayReloadMontage();
+
+	UFUNCTION()
+	void ReloadMontageEndedHandler(UAnimMontage *Montage, bool bInterrupted);
+
+	UFUNCTION()
+	void SwapMontageEndedHandler(UAnimMontage *Montage, bool bInterrupted);
+
 	virtual void OnRep_ReplicatedMovement() override;
 
+	// 加入下一轮游戏前禁止玩家行动
 	UPROPERTY(Replicated)
 	bool bDisableGameplay = false;
 
-	// 玩家死亡
+	// 玩家受击/死亡相关
+	UFUNCTION()
+	void ReceiveDamage(AActor *DamagedActor, float Damage, const UDamageType *DamageType,
+		class AController *InstigatorController, AActor *DamageCauser);
+
+	void PlayHitReactMontage();
+
 	void Elim(bool bPlayerLeftGame);
 
 	UFUNCTION(NetMultiCast, Reliable)
@@ -46,6 +61,12 @@ public:
 
 	virtual void Destroyed() override;
 
+	void DropOrDestroyWeapon(AWeapon *Weapon);
+	void DropOrDestroyWeapons();
+
+	/*
+	* HUD相关
+	*/
 	UFUNCTION(BlueprintImplementableEvent)
 	void ShowSniperScopeWidget(bool bShowScope);
 
@@ -54,14 +75,17 @@ public:
 	void UpdateHUDAmmo();
 	void SpawnDefaultWeapon();
 
+	// 用于SSR的碰撞盒
 	UPROPERTY()
 	TMap<FName, class UBoxComponent *> HitCollisionBoxes;
 
+	// 退出游戏相关
 	UFUNCTION(Server, Reliable)
 	void ServerLeaveGame();
 
 	FOnLeftGame OnLeftGame;
 
+	// 领先时显示光环
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastGainedTheLead();
 
@@ -69,13 +93,23 @@ public:
 	void MulticastLostTheLead();
 
 	void SetTeamColor(ETeam Team);
+
 protected:
 	virtual void BeginPlay() override;
+
+	/*
+	* 轴映射绑定
+	*/
 	void MoveForward(float Value);
 	void MoveRight(float Value);
 	void Turn(float Value);
 	void LookUp(float Value);
+
+	/*
+	* 操作映射绑定
+	*/
 	void RunButtonPressed();
+	virtual void Jump() override;
 
 	UFUNCTION(Server, Reliable)
 	void ServerRunButtonPressed();
@@ -101,30 +135,30 @@ protected:
 	void AimButtonPressed();
 	void AimButtonReleased();
 	void GrenadeButtonPressed();
-	void AimOffset(float DeltaTime);
-	void CalculateAO_Pitch();
-	void SimProxiesTurn();
-	virtual void Jump() override;
 	void FireButtonPressed();
 	void FireButtonReleased();
-	void PlayHitReactMontage();
-	void DropOrDestroyWeapon(AWeapon *Weapon);
-	void DropOrDestroyWeapons();
+
 	void SwapWeapon();
-	void SetSpawnPoint();
-	void OnPlayerStateInitialized();
 
 	UFUNCTION(Server, Reliable)
 	void ServerSwapWeapon();
 
-	UFUNCTION()
-	void ReceiveDamage(AActor *DamagedActor, float Damage, const UDamageType *DamageType, 
-		class AController * InstigatorController,AActor *DamageCauser);
+	// 瞄准和转向相关
+	void AimOffset(float DeltaTime);
+	void CalculateAO_Pitch();
+	void SimProxiesTurn();
+	void RotateInPlace(float DeltaTime);
+
+
+	// 团队模式中设置出生点为所属团队的出生点
+	void SetSpawnPoint();
+
+	// 用于轮询初始化PlayerState时设置HUD,团队颜色,出生点
+	void OnPlayerStateInitialized();
 
 	// 初始化与HUD相关的类
 	void PollInit();
-	void RotateInPlace(float DeltaTime);
-	
+
 	/*
 	* 用于服务器倒带的碰撞盒
 	*/
@@ -198,12 +232,6 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	class UWidgetComponent *OverheadWidget;
 
-	UPROPERTY(ReplicatedUsing = OnRep_OverlappingWeapon)
-	class AWeapon *OverlappingWeapon;
-
-	UFUNCTION()
-	void OnRep_OverlappingWeapon(AWeapon *LastWeapon);
-
 	/*
 	*  Blaster组件
 	*/
@@ -216,17 +244,36 @@ private:
 	UPROPERTY(VisibleAnywhere)
 	class UBuffComponent *Buff;
 
+	// 当前重叠的武器
+	UPROPERTY(ReplicatedUsing = OnRep_OverlappingWeapon)
+	class AWeapon *OverlappingWeapon;
+
+	UFUNCTION()
+	void OnRep_OverlappingWeapon(AWeapon *LastWeapon);
+
+	// 玩家背靠墙壁时隐藏角色和武器防止遮挡摄像头
 	void HideCameraIfCharacterClose();
 
 	UPROPERTY(EditAnywhere)
-	float CameraThreshold = 200.f;
+	float CameraThreshold = 100.f;
 
+	// 转向相关
 	float AO_Yaw;
 	float InterpAO_Yaw;
 	float AO_Pitch;
 	FRotator StartingAimRotation;
 	ETurningInPlace TurningInPlace;
 	void TurnInPlace(float DeltaTime);
+	bool bRotateRootBone;
+	FRotator ProxyRotationLastFrame;
+	FRotator ProxyRotation;
+	float ProxyYaw;
+	float TimeSinceLastMovementReplication;
+	float CalculateSpeed();
+
+	// 设置simulated的角色播放旋转动画的阈值
+	UPROPERTY(EditAnywhere)
+	float TurnThreshold = 0.5f;
 
 	/*
 	*  动画蒙太奇
@@ -248,18 +295,6 @@ private:
 
 	UPROPERTY(EditAnywhere, Category = Combat)
 	UAnimMontage *SwapMontage;
-
-	bool bRotateRootBone;
-
-	// 设置simulated的角色播放旋转动画的阈值
-	UPROPERTY(EditAnywhere)
-	float TurnThreshold = 0.5f;
-
-	FRotator ProxyRotationLastFrame;
-	FRotator ProxyRotation;
-	float ProxyYaw;
-	float TimeSinceLastMovementReplication;
-	float CalculateSpeed();
 
 	/*
 	* 血量
@@ -285,7 +320,6 @@ private:
 
 	bool bElimmed = false;
 
-
 	// 重生
 	FTimerHandle ElimTimer;
 
@@ -297,7 +331,7 @@ private:
 	bool bLeftGame = false;
 
 	/*
-	* 溶解效果
+	* 死亡时的溶解效果
 	*/
 	UPROPERTY(VisibleAnywhere)
 	UTimelineComponent *DissolveTimeLine;
@@ -359,6 +393,7 @@ private:
 	UPROPERTY()
 	class ABlasterPlayerState *BlasterPlayerState;
 
+	// 领先时显示的光环
 	UPROPERTY(EditAnywhere)
 	class UNiagaraSystem *CrownSystem;
 
@@ -382,32 +417,40 @@ private:
 
 public:	
 	void SetOverlappingWeapon(AWeapon *Weapon);
-	bool IsWeaponEquipped();
-	bool IsAiming();
+
 	FORCEINLINE float GetAO_Yaw() const { return AO_Yaw; }
 	FORCEINLINE float GetAO_Pitch() const { return AO_Pitch; }
-	AWeapon *GetEquippedWeapon(); 
 	FORCEINLINE ETurningInPlace GetTurningInPlace() const { return TurningInPlace; }
-	FVector GetHitTarget() const;
 	FORCEINLINE UCameraComponent *GetFollowCamera() const { return FollowCamera; }
 	FORCEINLINE bool ShouldRotateRootBone() const { return bRotateRootBone; }
-	FORCEINLINE bool IsElimmed() const { return bElimmed; }
+
 	FORCEINLINE void SetHealth(float Amount) { Health = Amount;}
 	FORCEINLINE float GetHealth() const { return Health; }
-	FORCEINLINE float GetMaxHealth() const { return MaxHealth; }
 	FORCEINLINE void SetShield(float Amount) { Shield = Amount; }
 	FORCEINLINE float GetShield() const { return Shield; }
+	FORCEINLINE float GetMaxHealth() const { return MaxHealth; }
 	FORCEINLINE float GetMaxShield() const { return MaxShield; }
+
+	AWeapon *GetEquippedWeapon();
+	FVector GetHitTarget() const;
 	ECombatState GetCombatState() const;
+
 	FORCEINLINE UCombatComponent *GetCombat() const { return Combat; }
 	FORCEINLINE UBuffComponent *GetBuff() const { return Buff; }
+	FORCEINLINE ULagCompensationComponent *GetLagCompensation() const { return LagCompensation; }
+
+
 	FORCEINLINE bool GetDisableGameplay() const { return bDisableGameplay; }
 	FORCEINLINE UAnimMontage *GetReloadMontage() const { return ReloadMontage; }
 	FORCEINLINE UStaticMeshComponent *GetAttachedGrenade() const { return AttachedGrenade; }
+
+	FORCEINLINE bool IsElimmed() const { return bElimmed; }
+	bool IsWeaponEquipped();
+	bool IsAiming();
 	bool IsLocallyReloading() const;
 	bool IsLocallySwapping() const;
-	FORCEINLINE ULagCompensationComponent *GetLagCompensation() const { return LagCompensation; }
 	bool IsHoldingTheFlag() const;
+
 	ETeam GetTeam();
 	void SetHoldingTheFlag(bool bHolding);
 };

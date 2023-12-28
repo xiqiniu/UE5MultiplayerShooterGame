@@ -18,7 +18,10 @@ class BLASTER_API ABlasterPlayerController : public APlayerController
 	GENERATED_BODY()
 
 public:
-
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty> &OutLifetimeProps) const override;
+	/*
+	* HUD相关
+	*/
 	void SetHUDHealth(float Health, float MaxHealth);
 	void SetHUDShield(float Shield, float MaxShield);
 	void SetHUDScore(float Score);
@@ -28,22 +31,24 @@ public:
 	void SetHUDMatchCountdown(float CountdownTime);
 	void SetHUDAnnouncementCountdown(float CountdownTime);
 	void SetHUDGrenades(int32 Grenades);
-	virtual void OnPossess(APawn* InPawn) override;
-	virtual float GetServerTime() const; 
-	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty> &OutLifetimeProps) const override;
-
 	void HideTeamScores();
 	void InitTeamScores();
 	void SetHUDRedTeamScores(int32 RedScore);
 	void SetHUDBlueTeamScores(int32 BlueScore);
 
-	virtual void ReceivedPlayer() override; // 客户端加入后尽快与服务器时钟同步
-	void OnMatchStateSet(FName State, bool bTeamsMatch = false);
+	// 玩家重生后,控制器去绑定新的角色会触发OnPossess,所以我们重写Onpossess让玩家重生后血量UI得到重置
+	virtual void OnPossess(APawn* InPawn) override;
 
-	void HandleMatchHasStarted(bool bTeamsMatch = false);
+	void OnMatchStateSet(FName State);
+	void HandleMatchHasStarted();
 	void HandleCooldown();
 
+	// 时钟同步相关
+	virtual float GetServerTime() const;
 	float SingleTripTime = 0.f;
+	virtual void ReceivedPlayer() override; // 客户端加入后尽快与服务器时钟同步
+	void SetHUDTime();
+
 	FHighPingDelegate HighPingDelegate;
 
 	void BroadcastElim(APlayerState *Attacker, APlayerState *Victim);
@@ -57,13 +62,11 @@ protected:
 	virtual void SetupInputComponent() override;
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
-	void SetHUDTime();
 	void PollInit();
 
 	/*
 	* 同步服务器和客户端的时间
 	*/
-
 	// 请求服务器当前时间,发送客户端发出请求的时间
 	UFUNCTION(Server, Reliable)
 	void ServerRequestServerTime(float TimeOfClientRequest);
@@ -79,6 +82,7 @@ protected:
 	float TimeSyncFrequency = 5.f; 
 
 	float TimeSyncRunningTime = 0.f;
+
 	void CheckTimeSync(float DeltaTime);
 
 	// 用来在玩家加入游戏时确认当前游戏状态的RPC
@@ -89,27 +93,25 @@ protected:
 	UFUNCTION(Client, Reliable)
 	void ClientJoinMidgame(FName StateOfMatch, float Warmup, float Match, float Cooldown, float StartingTime, bool bTeamMatch);
 
-	// 显示延迟图标
-	void HighPingWarning();
-	void StopHighPingWarning();
-	void CheckPing(float DeltaTime);
-
-	void ShowReturnToMainMenu();
-
 	UFUNCTION(Client, Reliable)
 	void ClientElimAnnouncement(APlayerState *Attacker, APlayerState *Victim);
 
-	bool bShowTeamScores = false;
-
+	// 获取游戏结束时显示的信息
 	FText GetInfoText(const TArray<class ABlasterPlayerState *> &Players);
 	FText GetTeamsInfoText(class ABlasterGameState *BlasterGameState);
+
 private:
+	// 是否显示团队分数
+	bool bShowTeamScores = false;
+
 	UPROPERTY()
 	class ABlasterHUD *BlasterHUD;
 	
 	/*
 	* 回到主菜单
 	*/
+	void ShowReturnToMainMenu();
+
 	UPROPERTY(EditAnywhere, Category = HUD)
 	TSubclassOf<class UUserWidget> ReturnToMainMenuWidget;
 
@@ -143,9 +145,8 @@ private:
 	class UCharacterOverlay *CharacterOverlay;
 
 	/*
-	* 设置失败时存下这些值,在CharacterOverlay有效后进行设置
+	* 设置HUD失败时存下这些值,在CharacterOverlay有效后进行设置
 	*/
-
 	float HUDHealth;
 	bool bInitializeHealth = false;
 	float HUDMaxHealth;
@@ -174,6 +175,11 @@ private:
 	/*
 	* 延迟相关
 	*/
+	// 显示延迟图标
+	void HighPingWarning();
+	void StopHighPingWarning();
+	void CheckPing(float DeltaTime);
+
 	float HighPingRunningTime = 0.f;
 
 	UPROPERTY(EditAnywhere)

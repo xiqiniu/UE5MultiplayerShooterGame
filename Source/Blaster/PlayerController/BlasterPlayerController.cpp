@@ -38,42 +38,11 @@ void ABlasterPlayerController::BeginPlay()
 	}*/
 }
 
-void ABlasterPlayerController::BroadcastElim(APlayerState *Attacker, APlayerState *Victim)
+void ABlasterPlayerController::GetLifetimeReplicatedProps(TArray<FLifetimeProperty> &OutLifetimeProps) const
 {
-	ClientElimAnnouncement(Attacker, Victim);
-}
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-void ABlasterPlayerController::ClientElimAnnouncement_Implementation(APlayerState *Attacker, APlayerState *Victim)
-{
-	APlayerState *Self= GetPlayerState<APlayerState>();
-	if (Attacker && Victim && Self)
-	{
-		BlasterHUD = BlasterHUD == nullptr ? Cast<ABlasterHUD>(GetHUD()) : BlasterHUD;
-		if (BlasterHUD)
-		{
-			if (Attacker == Self && Victim != Self)
-			{
-				BlasterHUD->AddElimAnnouncement(FText::FromString(TEXT("你")), FText::FromString(Victim->GetPlayerName()));
-				return;
-			}
-			if (Attacker == Victim && Attacker == Self)
-			{
-				BlasterHUD->AddElimAnnouncement(FText::FromString(TEXT("你")), FText::FromString(TEXT("你自己")));
-				return;
-			}
-			if (Victim == Self && Attacker != Self)
-			{
-				BlasterHUD->AddElimAnnouncement(FText::FromString(Attacker->GetPlayerName()), FText::FromString(TEXT("你")));
-				return;
-			}
-			if (Attacker == Victim && Attacker != Self)
-			{
-				BlasterHUD->AddElimAnnouncement(FText::FromString(Attacker->GetPlayerName()), FText::FromString(TEXT("他自己")));
-				return;
-			}
-			BlasterHUD->AddElimAnnouncement(FText::FromString(Attacker->GetPlayerName()), FText::FromString(Victim->GetPlayerName()));
-		}
-	}
+	DOREPLIFETIME(ABlasterPlayerController, MatchState);
 }
 
 void ABlasterPlayerController::SetupInputComponent()
@@ -84,116 +53,42 @@ void ABlasterPlayerController::SetupInputComponent()
 	InputComponent->BindAction("Quit", IE_Pressed, this, &ABlasterPlayerController::ShowReturnToMainMenu);
 }
 
-void ABlasterPlayerController::GetLifetimeReplicatedProps(TArray<FLifetimeProperty> &OutLifetimeProps) const
-{
-	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-
-	DOREPLIFETIME(ABlasterPlayerController, MatchState);
-}
-
 void ABlasterPlayerController::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 	SetHUDTime();
 	CheckTimeSync(DeltaTime);
-	PollInit();
 	CheckPing(DeltaTime);
+	PollInit();
 }
 
-void ABlasterPlayerController::CheckTimeSync(float DeltaTime)
+void ABlasterPlayerController::PollInit()
 {
-	TimeSyncRunningTime += DeltaTime;
-	if (IsLocalController() && TimeSyncRunningTime > TimeSyncFrequency)
+	if (CharacterOverlay == nullptr)
 	{
-		ServerRequestServerTime(GetWorld()->GetTimeSeconds());
-		TimeSyncRunningTime = 0.f;
-	}
-}
-
-void ABlasterPlayerController::CheckPing(float DeltaTime)
-{
-	HighPingRunningTime += DeltaTime;
-	if (HighPingRunningTime > CheckingPingFrequency)
-	{
-		BlasterPlayerState = BlasterPlayerState == nullptr ? 
-			Cast<ABlasterPlayerState>(GetPlayerState<APlayerState>()) : BlasterPlayerState;
-		if (BlasterPlayerState)
+		if (BlasterHUD && BlasterHUD->CharacterOverlay)
 		{
-			//UE_LOG(LogTemp, Warning, TEXT("PlayerState->GetPing() * 4 : %d"), PlayerState->GetPing() * 4);
-			// GetPing()得到的是压缩过的,是原本Ping的四分之一
-			if (BlasterPlayerState->GetPingInMilliseconds() * 4 > HighPingThreshold)
+			CharacterOverlay = BlasterHUD->CharacterOverlay;
+			if (CharacterOverlay)
 			{
-				HighPingWarning();
-				PingAnimationRunningTime = 0.f;
-				ServerReportPingStatus(true);
+				if (bInitializeHealth) SetHUDHealth(HUDHealth, HUDMaxHealth);
+				if (bInitializeShield) SetHUDShield(HUDShield, HUDMaxShield);
+				if (bInitializeScore) SetHUDScore(HUDScore);
+				if (bInitializeDefeats) SetHUDDefeats(HUDDefeats);
+				if (bInitializeCarriedAmmo) SetHUDCarriedAmmo(HUDCarriedAmmo);
+				if (bInitializeWeaponAmmo) SetHUDWeaponAmmo(HUDWeaponAmmo);
+				if (bInitializeTeamScores)
+					InitTeamScores();
+				ABlasterCharacter *BlasterCharacter = Cast<ABlasterCharacter>(GetPawn());
+				if (BlasterCharacter && BlasterCharacter->GetCombat())
+				{
+					if (bInitializeGrenades) SetHUDGrenades(BlasterCharacter->GetCombat()->GetGrenades());
+				}
 			}
-			else
-			{
-				ServerReportPingStatus(false);
-			}
-			HighPingRunningTime = 0.f;
-		}
-	}
-	bool bHighPingAnimationPlaying = BlasterHUD && BlasterHUD->CharacterOverlay && BlasterHUD->CharacterOverlay->HighPingAnimation && BlasterHUD->CharacterOverlay->IsAnimationPlaying(BlasterHUD->CharacterOverlay->HighPingAnimation);
-	if (bHighPingAnimationPlaying)
-	{
-		PingAnimationRunningTime += DeltaTime;
-		if (PingAnimationRunningTime > HighPingDuration)
-		{
-			StopHighPingWarning();
 		}
 	}
 }
 
-void ABlasterPlayerController::ShowReturnToMainMenu()
-{
-	if (ReturnToMainMenuWidget == nullptr) return;
-	if (ReturnToMainMenu == nullptr)
-	{
-		ReturnToMainMenu = CreateWidget<UReturnToMainMenu>(this, ReturnToMainMenuWidget);
-	}
-	if (ReturnToMainMenu)
-	{
-		bReturnToMainMenuOpen = !bReturnToMainMenuOpen;
-		if (bReturnToMainMenuOpen)
-		{
-			ReturnToMainMenu->MenuSetup();
-		}
-		else
-		{
-			ReturnToMainMenu->MenuTearDown();
-		}
-	}
-}
-
-void ABlasterPlayerController::ServerLeaveGame_Implementation()
-{
-	BlasterGameMode = BlasterGameMode == nullptr ? GetWorld()->GetAuthGameMode<ABlasterGameMode>() : BlasterGameMode;
-	if (BlasterGameMode)
-	{
-		BlasterGameMode->PlayerLeftGameByController(this);
-	}
-	LogOnScreen(this, FString::Printf(TEXT("OnLeftGameByController In Server IsBound: %s"), OnLeftGameByController.IsBound() ? TEXT("True") : TEXT("False")));
-	if (IsLocalPlayerController())
-	{
-		LogOnScreen(this, "Broadcast in server");
-		OnLeftGameByController.Broadcast();
-	}
-	else
-	{
-		LogOnScreen(this, "Call ClientBroadcast");
-		ClientBroadcastLeftGameByController();
-	}
-}
-
-void ABlasterPlayerController::ClientBroadcastLeftGameByController_Implementation()
-{
-	LogOnScreen(this, FString::Printf(TEXT("OnLeftGameByController In Client IsBound: %s"), OnLeftGameByController.IsBound() ? TEXT("True") : TEXT("False")));
-
-	LogOnScreen(this, "Broadcast in client");
-	OnLeftGameByController.Broadcast();
-
-}
 void ABlasterPlayerController::ServerCheckMatchState_Implementation()
 {
 	ABlasterGameMode *GameMode = Cast<ABlasterGameMode>(UGameplayStatics::GetGameMode(this));
@@ -219,11 +114,142 @@ void ABlasterPlayerController::ClientJoinMidgame_Implementation(FName StateOfMat
 	bShowTeamScores = bTeamMatch;
 	// 防止这个函数在MatchState改变后才调用,在这里直接调用OnMatchStateSet确保状态改变的影响在此处被触发
 	OnMatchStateSet(MatchState);
-	if (BlasterHUD && MatchState == MatchState::WaitingToStart) 
+	if (BlasterHUD)
 	{
 		BlasterHUD->AddAnnouncement();
+		if (MatchState == MatchState::InProgress)
+		{
+			if (BlasterHUD->Announcement)
+			{
+				BlasterHUD->Announcement->SetVisibility(ESlateVisibility::Hidden);
+			}
+		}
 	}
-} 
+}
+
+void ABlasterPlayerController::ReceivedPlayer()
+{
+	Super::ReceivedPlayer();
+	if (!HasAuthority())
+	{
+		ServerRequestServerTime(GetWorld()->GetTimeSeconds());
+	}
+}
+
+void ABlasterPlayerController::CheckTimeSync(float DeltaTime)
+{
+	TimeSyncRunningTime += DeltaTime;
+	if (IsLocalController() && TimeSyncRunningTime > TimeSyncFrequency)
+	{
+		ServerRequestServerTime(GetWorld()->GetTimeSeconds());
+		TimeSyncRunningTime = 0.f;
+	}
+}
+
+void ABlasterPlayerController::ServerRequestServerTime_Implementation(float TimeOfClientRequest)
+{
+	float ServerTimeOfReceived = GetWorld()->GetTimeSeconds();
+	ClientReportServerTime(TimeOfClientRequest, ServerTimeOfReceived);
+}
+
+void ABlasterPlayerController::ClientReportServerTime_Implementation(float TimeOfClientRequest, float TimeServerReceivedClientRequest)
+{
+	float RoundTripTime = GetWorld()->GetTimeSeconds() - TimeOfClientRequest;
+	SingleTripTime = 0.5f * RoundTripTime;
+	float CurrentServerTime = TimeServerReceivedClientRequest + RoundTripTime * 0.5f;
+	ClientServerDelta = CurrentServerTime - GetWorld()->GetTimeSeconds();
+}
+
+float ABlasterPlayerController::GetServerTime() const
+{
+	if (HasAuthority()) return GetWorld()->GetTimeSeconds();
+	return GetWorld()->GetTimeSeconds() + ClientServerDelta;
+}
+
+void ABlasterPlayerController::CheckPing(float DeltaTime)
+{
+	HighPingRunningTime += DeltaTime;
+	if (HighPingRunningTime > CheckingPingFrequency)
+	{
+		BlasterPlayerState = BlasterPlayerState == nullptr ? 
+			Cast<ABlasterPlayerState>(GetPlayerState<APlayerState>()) : BlasterPlayerState;
+		if (BlasterPlayerState)
+		{
+			//UE_LOG(LogTemp, Warning, TEXT("PlayerState->GetPing() * 4 : %d"), PlayerState->GetPing() * 4);
+			// GetPing()得到的是压缩过的,是原本Ping的四分之一 
+			// 5.3更新: GetPingInMilliseconds()已经乘过4了,不用乘了
+			if (BlasterPlayerState->GetPingInMilliseconds() > HighPingThreshold)
+			{
+				HighPingWarning();
+				PingAnimationRunningTime = 0.f;
+				ServerReportPingStatus(true);
+			}
+			else
+			{
+				ServerReportPingStatus(false);
+			}
+			HighPingRunningTime = 0.f;
+		}
+	}
+	bool bHighPingAnimationPlaying = BlasterHUD && BlasterHUD->CharacterOverlay && BlasterHUD->CharacterOverlay->HighPingAnimation && BlasterHUD->CharacterOverlay->IsAnimationPlaying(BlasterHUD->CharacterOverlay->HighPingAnimation);
+	if (bHighPingAnimationPlaying)
+	{
+		PingAnimationRunningTime += DeltaTime;
+		if (PingAnimationRunningTime > HighPingDuration)
+		{
+			StopHighPingWarning();
+		}
+	}
+}
+
+// UI播放高延迟动画
+void ABlasterPlayerController::HighPingWarning()
+{
+	BlasterHUD = BlasterHUD == nullptr ? Cast<ABlasterHUD>(GetHUD()) : BlasterHUD;
+	bool bHUDValid = BlasterHUD &&
+		BlasterHUD->CharacterOverlay &&
+		BlasterHUD->CharacterOverlay->HighPingImage &&
+		BlasterHUD->CharacterOverlay->HighPingAnimation;
+
+	if (bHUDValid)
+	{
+		BlasterHUD->CharacterOverlay->HighPingImage->SetOpacity(1.f);
+		BlasterHUD->CharacterOverlay->PlayAnimation(
+			BlasterHUD->CharacterOverlay->HighPingAnimation,
+			0.f,
+			5
+		);
+	}
+
+}
+
+void ABlasterPlayerController::StopHighPingWarning()
+{
+	BlasterHUD = BlasterHUD == nullptr ? Cast<ABlasterHUD>(GetHUD()) : BlasterHUD;
+	bool bHUDValid = BlasterHUD &&
+		BlasterHUD->CharacterOverlay &&
+		BlasterHUD->CharacterOverlay->HighPingImage &&
+		BlasterHUD->CharacterOverlay->HighPingAnimation;
+
+	if (bHUDValid)
+	{
+		BlasterHUD->CharacterOverlay->HighPingImage->SetOpacity(0.f);
+		if (BlasterHUD->CharacterOverlay->IsAnimationPlaying(BlasterHUD->CharacterOverlay->HighPingAnimation))
+		{
+			BlasterHUD->CharacterOverlay->StopAnimation(BlasterHUD->CharacterOverlay->HighPingAnimation);
+		}
+	}
+}
+
+void ABlasterPlayerController::ServerReportPingStatus_Implementation(bool bHighPing)
+{
+	HighPingDelegate.Broadcast(bHighPing);
+}
+
+void ABlasterPlayerController::ClientBroadcastLeftGameByController_Implementation()
+{
+	OnLeftGameByController.Broadcast();
+}
 
 void ABlasterPlayerController::OnPossess(APawn *InPawn)
 {
@@ -319,8 +345,6 @@ void ABlasterPlayerController::HideTeamScores()
 
 void ABlasterPlayerController::InitTeamScores()
 {
-	if(!HasAuthority()) UE_LOG(LogTemp, Warning, TEXT("Client InitTeamScores Call"));
-
 	BlasterHUD = BlasterHUD == nullptr ? Cast<ABlasterHUD>(GetHUD()) : BlasterHUD;
 	bool bHUDValid = BlasterHUD &&
 		BlasterHUD->CharacterOverlay &&
@@ -487,24 +511,23 @@ void ABlasterPlayerController::SetHUDTime()
 	else if (MatchState == MatchState::InProgress) TimeLeft = WarmupTime + MatchTime - GetServerTime() + LevelStartingTime;
 	else if (MatchState == MatchState::Cooldown) TimeLeft = CooldownTime + WarmupTime + MatchTime - GetServerTime() + LevelStartingTime;
 
-	uint32 SecondsLeft = FMath::CeilToInt(TimeLeft - GetServerTime());
+	uint32 SecondsLeft = FMath::CeilToInt(TimeLeft);
 
-	// 服务器不能直接只减去GetServerTime,因为在lobby里等待的时间也会加到GetTimeSeconds里面,所以要获取准确的CountdownTime
 	if (HasAuthority())
 	{
-		BlasterGameMode = BlasterGameMode == nullptr ? Cast<ABlasterGameMode>(UGameplayStatics::GetGameMode(this)) : BlasterGameMode;
-		if (BlasterGameMode)
+		LogOnScreen(this, FString::Printf(TEXT("TimeLeft = %f"), TimeLeft), FColor::White, 0.01f);
+		if (BlasterGameMode == nullptr)
 		{
+			BlasterGameMode = Cast<ABlasterGameMode>(UGameplayStatics::GetGameMode(this));
 			LevelStartingTime = BlasterGameMode->LevelStartingTime;
 		}
-		
-		BlasterGameMode = BlasterGameMode == nullptr ? Cast<ABlasterGameMode>(UGameplayStatics::GetGameMode(this)) : BlasterGameMode;
-		if (BlasterGameMode)
-		{
-			SecondsLeft = FMath::CeilToInt(BlasterGameMode->GetCountdownTime() + LevelStartingTime);
-		}
+		LogOnScreen(this, FString::Printf(TEXT("LevelStartingTime = %f"), LevelStartingTime), FColor::White, 0.01f);
 	}
-
+	else
+	{
+		LogOnScreen(this, FString::Printf(TEXT("TimeLeft= %f"), TimeLeft), FColor::White, 0.01f);
+		LogOnScreen(this, FString::Printf(TEXT("LevelStartingTime = %f"), LevelStartingTime), FColor::White, 0.01f);
+	}
 	if (CountdownInt != SecondsLeft)
 	{
 		if (MatchState == MatchState::WaitingToStart || MatchState == MatchState::Cooldown)
@@ -519,70 +542,13 @@ void ABlasterPlayerController::SetHUDTime()
 	CountdownInt = SecondsLeft;
 }
 
-void ABlasterPlayerController::PollInit()
-{
-	if (CharacterOverlay == nullptr)
-	{
-		if (BlasterHUD && BlasterHUD->CharacterOverlay)
-		{
-			CharacterOverlay = BlasterHUD->CharacterOverlay;
-			if (CharacterOverlay)
-			{
-				if(bInitializeHealth) SetHUDHealth(HUDHealth, HUDMaxHealth);
-				if (bInitializeShield) SetHUDShield(HUDShield, HUDMaxShield);
-				if (bInitializeScore) SetHUDScore(HUDScore);
-				if (bInitializeDefeats) SetHUDDefeats(HUDDefeats);
-				if (bInitializeCarriedAmmo) SetHUDCarriedAmmo(HUDCarriedAmmo);
-				if (bInitializeWeaponAmmo) SetHUDWeaponAmmo(HUDWeaponAmmo);
-				if (bInitializeTeamScores) 
-					InitTeamScores();
-				ABlasterCharacter *BlasterCharacter = Cast<ABlasterCharacter>(GetPawn());
-				if (BlasterCharacter && BlasterCharacter->GetCombat())
-				{
-					if (bInitializeGrenades) SetHUDGrenades(BlasterCharacter->GetCombat()->GetGrenades());
-				}
-			}
-		}
-	}
-}
-
-void ABlasterPlayerController::ServerRequestServerTime_Implementation(float TimeOfClientRequest)
-{
-	float ServerTimeOfReceived = GetWorld()->GetTimeSeconds();
-	ClientReportServerTime(TimeOfClientRequest, ServerTimeOfReceived);
-}
-
-void ABlasterPlayerController::ClientReportServerTime_Implementation(float TimeOfClientRequest, float TimeServerReceivedClientRequest)
-{
-	float RoundTripTime = GetWorld()->GetTimeSeconds() - TimeOfClientRequest;
-	SingleTripTime = 0.5f * RoundTripTime;
-	float CurrentServerTime = TimeServerReceivedClientRequest + RoundTripTime * 0.5f;
-	ClientServerDelta = CurrentServerTime - GetWorld()->GetTimeSeconds();
-
-}
-
-float ABlasterPlayerController::GetServerTime() const
-{
-	//if (HasAuthority()) return GetWorld()->GetTimeSeconds();
-	return GetWorld()->GetTimeSeconds() + ClientServerDelta;
-}
-
-void ABlasterPlayerController::ReceivedPlayer()
-{
-	Super::ReceivedPlayer();
-	if (IsLocalController())
-	{
-		ServerRequestServerTime(GetWorld()->GetTimeSeconds());
-	}
-}
-
-void ABlasterPlayerController::OnMatchStateSet(FName State, bool bTeamsMatch)
+void ABlasterPlayerController::OnMatchStateSet(FName State)
 {
 	MatchState = State;
 	// 正式开始游戏后再显示HUD
 	if (MatchState == MatchState::InProgress)
 	{
-		HandleMatchHasStarted(bTeamsMatch);
+		HandleMatchHasStarted();
 	}
 	else if (MatchState == MatchState::Cooldown)
 	{
@@ -602,7 +568,7 @@ void ABlasterPlayerController::OnRep_MatchState()
 	}
 }
 
-void ABlasterPlayerController::HandleMatchHasStarted(bool bTeamsMatch)
+void ABlasterPlayerController::HandleMatchHasStarted()
 {
 	BlasterHUD = BlasterHUD == nullptr ? Cast<ABlasterHUD>(GetHUD()) : BlasterHUD;
 	if (BlasterHUD)
@@ -656,6 +622,44 @@ void ABlasterPlayerController::HandleCooldown()
 		BlasterCharacter->bDisableGameplay = true;
 		// 禁用行动后,玩家无法停止开火,要手动停止
 		BlasterCharacter->GetCombat()->FireButtonPressed(false);
+	}
+}
+
+void ABlasterPlayerController::BroadcastElim(APlayerState *Attacker, APlayerState *Victim)
+{
+	ClientElimAnnouncement(Attacker, Victim);
+}
+
+void ABlasterPlayerController::ClientElimAnnouncement_Implementation(APlayerState *Attacker, APlayerState *Victim)
+{
+	APlayerState *Self = GetPlayerState<APlayerState>();
+	if (Attacker && Victim && Self)
+	{
+		BlasterHUD = BlasterHUD == nullptr ? Cast<ABlasterHUD>(GetHUD()) : BlasterHUD;
+		if (BlasterHUD)
+		{
+			if (Attacker == Self && Victim != Self)
+			{
+				BlasterHUD->AddElimAnnouncement(FText::FromString(TEXT("你")), FText::FromString(Victim->GetPlayerName()));
+				return;
+			}
+			if (Attacker == Victim && Attacker == Self)
+			{
+				BlasterHUD->AddElimAnnouncement(FText::FromString(TEXT("你")), FText::FromString(TEXT("你自己")));
+				return;
+			}
+			if (Victim == Self && Attacker != Self)
+			{
+				BlasterHUD->AddElimAnnouncement(FText::FromString(Attacker->GetPlayerName()), FText::FromString(TEXT("你")));
+				return;
+			}
+			if (Attacker == Victim && Attacker != Self)
+			{
+				BlasterHUD->AddElimAnnouncement(FText::FromString(Attacker->GetPlayerName()), FText::FromString(TEXT("他自己")));
+				return;
+			}
+			BlasterHUD->AddElimAnnouncement(FText::FromString(Attacker->GetPlayerName()), FText::FromString(Victim->GetPlayerName()));
+		}
 	}
 }
 
@@ -735,47 +739,45 @@ FText ABlasterPlayerController::GetTeamsInfoText(ABlasterGameState *BlasterGameS
 	return InfoText;
 }
 
-void ABlasterPlayerController::HighPingWarning()
+void ABlasterPlayerController::ShowReturnToMainMenu()
 {
-	BlasterHUD = BlasterHUD == nullptr ? Cast<ABlasterHUD>(GetHUD()) : BlasterHUD;
-	bool bHUDValid = BlasterHUD &&
-		BlasterHUD->CharacterOverlay &&
-		BlasterHUD->CharacterOverlay->HighPingImage &&
-		BlasterHUD->CharacterOverlay->HighPingAnimation;
-
-	if (bHUDValid)
+	if (ReturnToMainMenuWidget == nullptr) return;
+	if (ReturnToMainMenu == nullptr)
 	{
-		BlasterHUD->CharacterOverlay->HighPingImage->SetOpacity(1.f);
-		BlasterHUD->CharacterOverlay->PlayAnimation(
-			BlasterHUD->CharacterOverlay->HighPingAnimation,
-			0.f,
-			5
-		);
+		ReturnToMainMenu = CreateWidget<UReturnToMainMenu>(this, ReturnToMainMenuWidget);
 	}
-
-}
-
-void ABlasterPlayerController::StopHighPingWarning()
-{
-	BlasterHUD = BlasterHUD == nullptr ? Cast<ABlasterHUD>(GetHUD()) : BlasterHUD;
-	bool bHUDValid = BlasterHUD &&
-		BlasterHUD->CharacterOverlay &&
-		BlasterHUD->CharacterOverlay->HighPingImage &&
-		BlasterHUD->CharacterOverlay->HighPingAnimation;
-
-	if (bHUDValid)
+	if (ReturnToMainMenu)
 	{
-		BlasterHUD->CharacterOverlay->HighPingImage->SetOpacity(0.f);
-		if (BlasterHUD->CharacterOverlay->IsAnimationPlaying(BlasterHUD->CharacterOverlay->HighPingAnimation))
+		bReturnToMainMenuOpen = !bReturnToMainMenuOpen;
+		if (bReturnToMainMenuOpen)
 		{
-			BlasterHUD->CharacterOverlay->PlayAnimation(BlasterHUD->CharacterOverlay->HighPingAnimation);
+			ReturnToMainMenu->MenuSetup();
+		}
+		else
+		{
+			ReturnToMainMenu->MenuTearDown();
 		}
 	}
 }
 
-void ABlasterPlayerController::ServerReportPingStatus_Implementation(bool bHighPing)
+void ABlasterPlayerController::ServerLeaveGame_Implementation()
 {
-	HighPingDelegate.Broadcast(bHighPing);
+	BlasterGameMode = BlasterGameMode == nullptr ? GetWorld()->GetAuthGameMode<ABlasterGameMode>() : BlasterGameMode;
+	if (BlasterGameMode)
+	{
+		BlasterGameMode->PlayerLeftGameByController(this);
+	}
+	LogOnScreen(this, FString::Printf(TEXT("OnLeftGameByController In Server IsBound: %s"), OnLeftGameByController.IsBound() ? TEXT("True") : TEXT("False")));
+	if (IsLocalPlayerController())
+	{
+		LogOnScreen(this, "Broadcast in server");
+		OnLeftGameByController.Broadcast();
+	}
+	else
+	{
+		LogOnScreen(this, "Call ClientBroadcast");
+		ClientBroadcastLeftGameByController();
+	}
 }
 
 //void ABlasterPlayerController::OnSkipWarmupChanged(bool bSkipWarmup)

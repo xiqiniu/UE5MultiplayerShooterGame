@@ -18,6 +18,7 @@ public:
 	UCombatComponent();
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty> &OutLifetimeProps) const override;
+
 	void EquipWeapon(class AWeapon *WeaponToEquip);
 	void SwapWeapons();
 	void Reload();
@@ -31,10 +32,11 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void FinishSwapAttachWeapon();
-	void FireButtonPressed(bool bPressed);
 
 	UFUNCTION(BlueprintCallable)
 	void ShotgunShellReload();
+
+	void FireButtonPressed(bool bPressed);
 
 	void JumpToShotgunEnd();
 
@@ -53,26 +55,21 @@ public:
 	bool bLocallyReloading = false;
 
 	bool bLocallySwapping = false;
+
 protected:
 	virtual void BeginPlay() override;
 
-	void SetAiming(bool bIsAiming);
-	
-	UFUNCTION(Server, Reliable)
-	void ServerSetAiming(bool bIsAiming);
-
-	UFUNCTION()
-	void OnRep_EquippedWeapon();
-
-	UFUNCTION()
-	void OnRep_SecondaryWeapon();
-
+	/*
+	* 开火相关
+	*/
 	void Fire();
 	void FireProjectileWeapon();
 	void FireHitScanWeapon();
 	void FireShotgun();
+
 	void LocalFire(const FVector_NetQuantize &TraceHitTarget);
 	void ShotgunLocalFire(const TArray<FVector_NetQuantize> &TraceHitTargets);
+
 	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerFire(const FVector_NetQuantize &TraceHitTarget, float FireDelay);
 
@@ -85,6 +82,9 @@ protected:
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastShotgunFire(const TArray<FVector_NetQuantize> &TraceHitTargets);
 
+	/*
+	* 手榴弹相关
+	*/
 	void ThrowGrenade();
 
 	UFUNCTION(Server, Reliable)
@@ -93,10 +93,17 @@ protected:
 	UPROPERTY(EditAnywhere)
 	TSubclassOf<class AProjectile> GrenadeClass;
 
+	// 瞄准相关
 	void TraceUnderCrosshairs(FHitResult &TraceHitResult);
 
 	void SetHUDCrosshairs(float DeltaTime);
 
+	void SetAiming(bool bIsAiming);
+
+	UFUNCTION(Server, Reliable)
+	void ServerSetAiming(bool bIsAiming);
+
+	// 装弹相关
 	UFUNCTION(Server, Reliable)
 	void ServerReload();
 
@@ -104,18 +111,21 @@ protected:
 
 	int32 AmountToReload();
 
-	void DropEquippedWeapon();
+	void ReloadEmptyWeapon();
+
 	void AttachActorToRightHand(AActor *ActorToAttach);
 	void AttachActorToLeftHand(AActor *ActorToAttach);
 	void AttachFlagToLeftHand(AWeapon *Flag);
 	void AttachActorToBackpack(AActor *ActorToAttach);
+
 	void UpdateCarriedAmmo();
-	void PlayEquippedWeaponSound(AWeapon *WeaponToEquip);
-	void ReloadEmptyWeapon();
 	void ShowAttachedGrenade(bool bShowGrenade);
 
 	void EquipPrimaryWeapon(AWeapon *WeaponToEquip);
+	void DropEquippedWeapon(); // 调用EquipPrimaryWeapon时,如果手上有武器要先丢下
 	void EquipSecondaryWeapon(AWeapon *WeaponToEquip);
+	void PlayEquippedWeaponSound(AWeapon *WeaponToEquip);
+
 private:
 	UPROPERTY()
 	class ABlasterCharacter *Character;
@@ -132,25 +142,14 @@ private:
 	UPROPERTY(ReplicatedUsing = OnRep_SecondaryWeapon)
 	AWeapon *SecondaryWeapon;
 
-	UPROPERTY(ReplicatedUsing = OnRep_Aiming)
-	bool bAiming = false;
-
-	bool bAimButtonPressed = false;
+	UFUNCTION()
+	void OnRep_EquippedWeapon();
 
 	UFUNCTION()
-	void OnRep_Aiming();
-
-	
-	UPROPERTY(EditAnywhere)
-	float BaseWalkSpeed;
-
-	UPROPERTY(EditAnywhere)
-	float AimWalkSpeed;
-
-	bool bFireButtonPressed;
+	void OnRep_SecondaryWeapon();
 
 	/*
-	* HUD and crosshairs
+	* 准星相关
 	*/
 	float CrosshairVelocityFactor;
 	float CrosshairInAirFactor;
@@ -160,8 +159,22 @@ private:
 	FVector HitTarget;
 
 	/*
-	* Aiming and FOV
+	* 瞄准相关
 	*/
+	UPROPERTY(ReplicatedUsing = OnRep_Aiming)
+	bool bAiming = false;
+
+	bool bAimButtonPressed = false;
+
+	UFUNCTION()
+	void OnRep_Aiming();
+
+	UPROPERTY(EditAnywhere)
+	float BaseWalkSpeed;
+
+	UPROPERTY(EditAnywhere)
+	float AimWalkSpeed;
+
 	// 不瞄准时候的FOV, 在BeginPlay设置
 	float DefaultFOV;
 
@@ -169,14 +182,17 @@ private:
 	float ZoomedFOV = 30.f;
 
 	float CurrentFOV;
+
 	UPROPERTY(EditAnywhere, Category = Combat)
 	float ZoomInterpSpeed = 20.f;
 
 	void InterpFOV(float DeltaTime);
 
 	/*
-	* Automatic Fire
+	* 开火相关
 	*/
+	bool bFireButtonPressed;
+
 	FTimerHandle FireTimer;
 
 	bool bCanFire = true;
@@ -186,7 +202,11 @@ private:
 	// 判断能否开火
 	bool CanFire();
 
-	// 角色当前携带武器种类的弹药量,复制这个而不是整个TMap,因为服务器和客户端用哈希算出来的结果不一定一样, TMap是无法复制的
+	/*
+	* 弹药相关
+	*/
+	// 角色当前携带武器种类的弹药量,复制这个而不是整个TMap
+	// 因为服务器和客户端用哈希算出来的结果不一定一样, TMap是无法复制的
 	UPROPERTY(ReplicatedUsing = OnRep_CarriedAmmo)
 	int32 CarriedAmmo;
 
@@ -218,17 +238,6 @@ private:
 	
 	UPROPERTY(EditAnywhere)
 	int32 StartingGrenadeLauncherAmmo = 0;
-
-	void InitializeCarriedAmmo();
-
-	UPROPERTY(ReplicatedUsing = OnRep_CombatState)
-	ECombatState CombatState = ECombatState::ECS_Unoccupied;
-
-	UFUNCTION()
-	void OnRep_CombatState();
-
-	void UpdateAmmoValues();
-	void UpdateShotgunAmmoValues();
 	
 	UPROPERTY(ReplicatedUsing = OnRep_Grenades)
 	int32 Grenades = 4;
@@ -239,7 +248,16 @@ private:
 	UPROPERTY(EditAnywhere)
 	int32 MaxGrenades = 4;
 
+	void InitializeCarriedAmmo();
 	void UpdateHUDGrenades();
+	void UpdateAmmoValues();
+	void UpdateShotgunAmmoValues();
+
+	UPROPERTY(ReplicatedUsing = OnRep_CombatState)
+	ECombatState CombatState = ECombatState::ECS_Unoccupied;
+
+	UFUNCTION()
+	void OnRep_CombatState();
 
 	UPROPERTY(ReplicatedUsing = OnRep_HoldingTheFlag)
 	bool bHoldingTheFlag = false;
@@ -249,6 +267,7 @@ private:
 
 	UPROPERTY()
 	AWeapon *TheFlag;
+
 public:	
 	FORCEINLINE int32 GetGrenades() const { return Grenades; }
 	bool ShouldSwapWeapons();

@@ -46,8 +46,17 @@ void ABlasterGameMode::OnMatchStateSet()
 
         if (BlasterPlayerController)
         {
-            BlasterPlayerController->OnMatchStateSet(MatchState, bTeamsMatch);
+            BlasterPlayerController->OnMatchStateSet(MatchState);
         }
+    }
+}
+
+void ABlasterGameMode::GameModeRestartGame()
+{
+    UWorld *World = GetWorld();
+    if (World)
+    {
+        World->ServerTravel(FString("/Game/Maps/BlasterMap?listen"));
     }
 }
 
@@ -91,7 +100,7 @@ void ABlasterGameMode::Tick(float DeltaTime)
             {
                 BlasterGameInstance->SetShouldSkipWarmup(true);
             }*/
-            RestartGame();
+            GameModeRestartGame();
         }
     }
 }

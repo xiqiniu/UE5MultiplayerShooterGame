@@ -68,6 +68,5 @@ void AProjectileWeapon::Fire(const FVector &HitTarget)
 				SpawnedProjectile->HeadShotDamage = HeadShotDamage;
 			}
 		}
-
 	}
 }

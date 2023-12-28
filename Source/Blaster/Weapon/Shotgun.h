@@ -17,6 +17,7 @@ class BLASTER_API AShotgun : public AHitScanWeapon
 public:
 	void ShotgunTraceEndWithScatter(const FVector &HitTarget, TArray<FVector_NetQuantize> &HitTargets);
 	virtual void FireShotgun(const TArray<FVector_NetQuantize> &HitTargets);
+
 private:
 	UPROPERTY(EditAnywhere, Category = "Weapon Scatter")
 	uint32 NumberOfPellets = 10;

@@ -19,7 +19,7 @@ void ALobbyGameMode::PostLogin(APlayerController *NewPlayer)
 			UWorld *World = GetWorld();
 			if (World)
 			{
-				//bUseSeamlessTravel = true;
+				bUseSeamlessTravel = true;
 
 				FString MatchType = Subsystem->DesiredMatchType;
 				if (MatchType == "FreeForAll")

@@ -17,11 +17,12 @@ public:
 
 protected:
 	virtual void SetupInputComponent() override;
-	void ShowReturnToMainMenu();
 private:
 	/*
 	* 回到主菜单
 	*/
+	void ShowReturnToMainMenu();
+
 	UPROPERTY(EditAnywhere, Category = HUD)
 	TSubclassOf<class UUserWidget> ReturnToMainMenuWidget;
 

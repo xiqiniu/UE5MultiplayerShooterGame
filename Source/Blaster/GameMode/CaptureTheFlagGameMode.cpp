@@ -5,6 +5,7 @@
 #include "Blaster/Weapon/Flag.h"
 #include "Blaster/CaptureTheFlag/FlagZone.h"
 #include "Blaster/GameState/BlasterGameState.h"
+
 void ACaptureTheFlagGameMode::PlayerEliminated(ABlasterCharacter *ElimmedCharacter, ABlasterPlayerController *VictimController, ABlasterPlayerController *AttackerController)
 {
 	ABlasterGameMode::PlayerEliminated(ElimmedCharacter, VictimController, AttackerController);
@@ -24,5 +25,14 @@ void ACaptureTheFlagGameMode::FlagCaptured(AFlag *Flag, AFlagZone *FlagZone)
 		{
 			BlasterGameState->RedTeamScores();
 		}
+	}
+}
+
+void ACaptureTheFlagGameMode::GameModeRestartGame()
+{
+	UWorld *World = GetWorld();
+	if (World)
+	{
+		World->ServerTravel(FString("/Game/Maps/CaptureTheFlagMap?listen"));
 	}
 }

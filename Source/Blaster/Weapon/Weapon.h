@@ -45,7 +45,7 @@ public:
 	void SetHUDAmmo();
 
 	/*
-	* Textrues for the weapon crosshairs
+	* 准星使用的纹理(不同武器的准星不同)
 	*/
 	UPROPERTY(EditAnywhere, Category = Crosshairs)
 	class UTexture2D *CrosshairsCenter;
@@ -63,7 +63,7 @@ public:
 	class UTexture2D *CrosshairsBottom;
 
 	/*
-	* 瞄准时增大FOV
+	* 瞄准时减小FOV
 	*/
 	UPROPERTY(EditAnywhere)
 	float ZoomedFOV = 30.f;
@@ -74,18 +74,13 @@ public:
 	/*
 	* 自动开火
 	*/
-		UPROPERTY(EditAnywhere, Category = Combat)
+	UPROPERTY(EditAnywhere, Category = Combat)
 	float FireDelay = 0.15f;
 
 	UPROPERTY(EditAnywhere, Category = Combat)
 	bool bAutomatic = true;
 
-	UPROPERTY(EditAnywhere)
-	class USoundCue *EquipSound;
-
-	/*
-	* 启用或禁用自定义深度
-	*/
+	// 启用或禁用自定义深度
 	void EnableCustomDepth(bool bEnable);
 
 	// 销毁玩家出生自带的武器
@@ -97,14 +92,19 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Weapon Scatter")
 	bool bUseScatter = false;
 
+	UPROPERTY(EditAnywhere)
+	class USoundCue *EquipSound;
+
 	FVector TraceEndWithScatter(const FVector &HitTarget);
 
 protected:
 	virtual void BeginPlay() override;	
+
 	virtual void OnWeaponStateSet();
 	virtual void OnEquipped();
 	virtual void OnDropped();
 	virtual void OnEquippedSecondary();
+
 	UFUNCTION()
 	virtual void OnSphereOverlap(UPrimitiveComponent *OverlappedComponent, AActor *OtherActor, UPrimitiveComponent *OtherComp, 
 		int32 OtherBodyIndex, bool bFromSweep, const FHitResult &SweepResult);
@@ -122,6 +122,7 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Weapon Scatter")
 	float SphereRadius = 75.f;
 
+	// 伤害
 	UPROPERTY(EditAnywhere)
 	float Damage = 20.f;
 
@@ -139,18 +140,13 @@ protected:
 
 	UFUNCTION()
 	void OnPingTooHigh(bool bPingTooHigh);
+
 private:
 	UPROPERTY(VisibleAnywhere, Category = "Weapon Properties")
 	USkeletalMeshComponent *WeaponMesh;
 
 	UPROPERTY(VisibleAnywhere, Category = "Weapon Properties")
 	class USphereComponent *AreaSphere;
-
-	UPROPERTY(ReplicatedUsing = OnRep_WeaponSate,VisibleAnywhere, Category = "Weapon Properties")
-	EWeaponState WeaponState;
-
-	UFUNCTION()
-	void OnRep_WeaponSate();
 
 	UPROPERTY(VisibleAnywhere, Category = "Weapon Properties")
 	class UWidgetComponent *PickUpWidget;
@@ -171,10 +167,17 @@ private:
 	UPROPERTY(EditAnywhere)
 	int32 MagCapacity;
 
+	UPROPERTY(ReplicatedUsing = OnRep_WeaponSate, VisibleAnywhere, Category = "Weapon Properties")
+	EWeaponState WeaponState;
+
+	UFUNCTION()
+	void OnRep_WeaponSate();
+
 	// 未处理的服务器请求数量
 	// 在SpendRound中增加, 在ClientUpdateAmmo中减少
 	int32 Sequence = 0;
 
+	// 消耗一个子弹
 	void SpendRound();
 
 	UFUNCTION(Client, Reliable)
@@ -188,20 +191,21 @@ private:
 
 	UPROPERTY(EditAnywhere)
 	ETeam Team;
+
 public:	
 	FORCEINLINE USphereComponent *GetAreaSphere() const { return AreaSphere; }
 	FORCEINLINE USkeletalMeshComponent *GetWeaponMesh() const { return WeaponMesh; }
 	FORCEINLINE UWidgetComponent *GetPickupWidget() const { return PickUpWidget; }
-	void SetWeaponState(EWeaponState State);
-
 	FORCEINLINE float GetZoomedFOV() const { return ZoomedFOV; }
 	FORCEINLINE float GetZoomedInterpSpeed() const { return ZoomInterpSpeed; }
-	bool IsEmpty() const; 
-	bool IsFull() const; 
 	FORCEINLINE EWeaponType GetWeaponType() const { return WeaponType; }
 	FORCEINLINE int32 GetAmmo() const { return Ammo; }
 	FORCEINLINE int32 GetMagCapacity() const { return MagCapacity; }
 	FORCEINLINE float GetDamage() const { return Damage; }
 	FORCEINLINE float GetHeadShotDamage() const { return HeadShotDamage; }
 	FORCEINLINE ETeam GetTeam() const { return Team; }
+
+	void SetWeaponState(EWeaponState State);
+	bool IsEmpty() const; 
+	bool IsFull() const; 
 };

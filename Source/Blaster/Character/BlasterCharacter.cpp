@@ -271,7 +271,28 @@ void ABlasterCharacter::Tick(float DeltaTime)
 	RotateInPlace(DeltaTime);
 
 	HideCameraIfCharacterClose();
+
 	PollInit();
+
+	if (!HasAuthority())
+	{
+		switch (Combat->CombatState)
+		{
+		case ECombatState::ECS_Reloading:
+			LogOnScreen(this, "CombatState = ECS_Reloading", FColor::Red, 0.01f);
+			break;
+		case ECombatState::ECS_Unoccupied:
+			LogOnScreen(this, "CombatState = ECS_Unoccupied", FColor::Red, 0.01f);
+			break;
+		case ECombatState::ECS_ThrowingGrenade:
+			LogOnScreen(this, "CombatState = ECS_ThrowingGrenade", FColor::Red, 0.01f);
+			break;
+		case ECombatState::ECS_SwappingWeapons:
+			LogOnScreen(this, "ECS_SwappingWeapons", FColor::Red, 0.01f);
+			break;
+		}
+	}
+
 }
 
 void ABlasterCharacter::RotateInPlace(float DeltaTime)
@@ -376,11 +397,23 @@ void ABlasterCharacter::PlayReloadMontage()
 		case EWeaponType::EWT_SniperRifle:
 			SectionName = FName("SniperRifle");
 			break;
-			case EWeaponType::EWT_GrenadeLauncher:
+		case EWeaponType::EWT_GrenadeLauncher:
 			SectionName = FName("GrenadeLauncher");
 			break;
 		}
 		AnimInstance->Montage_JumpToSection(SectionName);
+	}
+
+	AnimInstance->OnMontageEnded.AddDynamic(this, &ThisClass::ReloadMontageEndedHandler);
+}
+
+void ABlasterCharacter::ReloadMontageEndedHandler(UAnimMontage *Montage, bool bInterrupted)
+{
+	if (Combat && Montage == ReloadMontage)
+	{
+		Combat->FinishReloading();
+		UBlasterAnimInstance *AnimInstance = Cast<UBlasterAnimInstance>(GetMesh()->GetAnimInstance());
+		if (AnimInstance) AnimInstance->OnMontageEnded.RemoveDynamic(this, &ThisClass::ReloadMontageEndedHandler);
 	}
 }
 
@@ -409,13 +442,18 @@ void ABlasterCharacter::PlaySwapMontage()
 	{
 		AnimInstance->Montage_Play(SwapMontage);
 	}
+
+	AnimInstance->OnMontageEnded.AddDynamic(this, &ThisClass::SwapMontageEndedHandler);
 }
 
-void ABlasterCharacter::OnRep_ReplicatedMovement()
+void ABlasterCharacter::SwapMontageEndedHandler(UAnimMontage *Montage, bool bInterrupted)
 {
-	Super::OnRep_ReplicatedMovement();
-	SimProxiesTurn();
-	TimeSinceLastMovementReplication = 0;
+	if (Combat && Montage == SwapMontage)
+	{
+		Combat->FinishSwap();
+		UBlasterAnimInstance *AnimInstance = Cast<UBlasterAnimInstance>(GetMesh()->GetAnimInstance());
+		if (AnimInstance) AnimInstance->OnMontageEnded.RemoveDynamic(this, &ThisClass::SwapMontageEndedHandler);
+	}
 }
 
 void ABlasterCharacter::PlayHitReactMontage()
@@ -429,6 +467,13 @@ void ABlasterCharacter::PlayHitReactMontage()
 		FName SectionName("FromFront");
 		AnimInstance->Montage_JumpToSection(SectionName);
 	}
+}
+
+void ABlasterCharacter::OnRep_ReplicatedMovement()
+{
+	Super::OnRep_ReplicatedMovement();
+	SimProxiesTurn();
+	TimeSinceLastMovementReplication = 0;
 }
 
 void ABlasterCharacter::ReceiveDamage(AActor *DamagedActor, float Damage, const UDamageType *DamageType, AController *InstigatorController, AActor *DamageCauser)
@@ -566,7 +611,7 @@ void ABlasterCharacter::EquipButtonPressed()
 			Combat->ShouldSwapWeapons() &&
 			!HasAuthority() &&
 			Combat->CombatState == ECombatState::ECS_Unoccupied &&
-			!IsLocallySwapping();
+			!Combat->bLocallySwapping;
 		if (bSwap)
 		{
 			Combat->bLocallySwapping = true;
@@ -703,8 +748,11 @@ void ABlasterCharacter::AimButtonReleased()
 
 void ABlasterCharacter::GrenadeButtonPressed()
 {
-	if (Combat && Combat->bHoldingTheFlag) return;
-	Combat->ThrowGrenade();
+	if (Combat)
+	{
+		if (Combat->bHoldingTheFlag) return;
+		Combat->ThrowGrenade();
+	}
 }
 
 void ABlasterCharacter::AimOffset(float DeltaTime)

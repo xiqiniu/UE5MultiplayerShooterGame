@@ -24,6 +24,16 @@ void ULagCompensationComponent::BeginPlay()
 	//ShowFramePackage(Package, FColor::Orange);
 }
 
+void ULagCompensationComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction)
+{
+	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+	// 只需要在服务器上记录帧信息
+	if (Character == nullptr || !Character->HasAuthority()) return;
+
+	SaveFramePackage();
+}
+
 FFramePackage ULagCompensationComponent::InterpBetweenFrames(const FFramePackage &OlderFrame, const FFramePackage &YoungerFrame, const float HitTime)
 {
 	const float Distance = YoungerFrame.Time - OlderFrame.Time;
@@ -545,15 +555,6 @@ void ULagCompensationComponent::ShotgunServerScoreRequest_Implementation(const T
 			UDamageType::StaticClass()
 		);
 	}
-}
-
-void ULagCompensationComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
-{
-	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-
-	if (Character == nullptr || !Character->HasAuthority()) return;
-	
-	SaveFramePackage();
 }
 
 void ULagCompensationComponent::SaveFramePackage()

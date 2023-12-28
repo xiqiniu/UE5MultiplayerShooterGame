@@ -1,5 +1,6 @@
 #pragma once
 
+// LineTrace起点到终点的距离
 #define TRACE_LENGTH 80000
 
 #define CUSTOM_DEPTH_PURPLE 250
